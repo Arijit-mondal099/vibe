@@ -1,1 +1,3 @@
-bun exec commitlint --edit "$1"
+echo "args: $@" > .husky/debug.log
+echo "1: $1" >> .husky/debug.log
+ls -la "$1" >> .husky/debug.log 2>&1
