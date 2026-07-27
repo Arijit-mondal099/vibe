@@ -25,7 +25,7 @@ export const appRouter = createTRPCRouter({
       await inngest.send({
         name: "app/task.created",
         data: {
-          email: input.text,
+          text: input.text,
         },
       });
 

@@ -19,10 +19,13 @@
     "db:studio": "bunx prisma studio",
     "db:validate": "bunx prisma validate",
     "db:format": "bunx prisma format",
-    "db:status": "bunx prisma migrate status"
+    "db:status": "bunx prisma migrate status",
+    "inngest": "npx inngest-cli@latest dev"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@e2b/code-interpreter": "^2.7.0",
+    "@inngest/agent-kit": "^0.13.2",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@shadcn/react": "^0.2.1",
