@@ -1,3 +1,3 @@
-import { processTask } from "./functions";
+import { codeAgentFunction } from "./code-agent-function";
 
-export const functions = [processTask];
+export const functions = [codeAgentFunction];
