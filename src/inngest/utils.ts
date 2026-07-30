@@ -1,5 +1,43 @@
-import Sandbox from "@e2b/code-interpreter";
+import { Sandbox } from "@e2b/code-interpreter";
+import { AgentResult, TextMessage } from "@inngest/agent-kit";
 
+export const TEMPLATE =
+  process.env.VIBE_TEMPLATE || "tests-default-team-30d4/vibe-nextjs-test-4";
+export const SANDBOX_TIMEOUT_MS = 600_000 as const;
+export const MAX_ITER = 15 as const;
+
+/**
+ * Create a sandbox and return the ID of sandbox
+ * @returns sandbox id
+ */
+export const getSandboxId = async () => {
+  const sbx = await Sandbox.create(TEMPLATE, { timeoutMs: SANDBOX_TIMEOUT_MS });
+  return sbx.sandboxId;
+};
+
+/**
+ * @param sbxId sandbox id to get sandbox
+ * @returns sandbox
+ */
 export const getSandbox = async (sbxId: string) => {
   return await Sandbox.connect(sbxId);
+};
+
+/**
+ * Return last response by assistant
+ */
+export const lastAssistantTextMessageContent = (result: AgentResult) => {
+  const lastAssistantTextMessageIndex = result.output.findLastIndex(
+    (message) => message.role === "assistant",
+  );
+
+  const message = result.output[lastAssistantTextMessageIndex] as
+    | TextMessage
+    | undefined;
+
+  return message?.content
+    ? typeof message.content === "string"
+      ? message?.content
+      : message.content.map((c) => c.text).join(" ")
+    : undefined;
 };

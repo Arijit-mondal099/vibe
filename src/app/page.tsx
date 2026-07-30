@@ -27,7 +27,7 @@ export default function Page() {
       <Button
         disabled={invoke.isPaused}
         onClick={() => {
-          invoke.mutate({ text: value });
+          invoke.mutate({ prompt: value });
         }}
       >
         Invoke a background job
