@@ -2,6 +2,7 @@ import { createTool } from "@inngest/agent-kit";
 import { z } from "zod";
 import { MAX_RESULTS, FETCH_TIMEOUT_MS, truncate } from "./helpers";
 import type { SearchResult, SearchResponse } from "./helpers";
+import { env } from "@/lib/env";
 
 /**
  * Agent tool: search the web via the Tavily API.
@@ -28,13 +29,7 @@ export const webSearch = () => {
 
     handler: async ({ query }, { step }) => {
       return await step?.run("web-search", async () => {
-        const apiKey = process.env.TAVILY_API_KEY;
-        if (!apiKey) {
-          return JSON.stringify({
-            results: [],
-            error: "Web search is not configured (missing TAVILY_API_KEY).",
-          } satisfies SearchResponse);
-        }
+        const apiKey = env.TAVILY_API_KEY;
 
         // Abort if Tavily doesn't respond within the timeout
         const controller = new AbortController();
