@@ -2,7 +2,10 @@ import { Sandbox } from "@e2b/code-interpreter";
 import { AgentResult, TextMessage } from "@inngest/agent-kit";
 
 export const TEMPLATE =
-  process.env.VIBE_TEMPLATE || "tests-default-team-30d4/vibe-nextjs-test-4";
+  process.env.VIBE_TEMPLATE ||
+  (process.env.NODE_ENV === "production"
+    ? "tests-default-team-30d4/vibe-nextjs-prod"
+    : "tests-default-team-30d4/vibe-nextjs-dev");
 export const SANDBOX_TIMEOUT_MS = 600_000 as const;
 export const MAX_ITER = 15 as const;
 
