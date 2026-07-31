@@ -35,6 +35,11 @@ jobs:
     needs: [lint, typecheck]
     env:
       DATABASE_URL: postgres://localhost:5432/db
+      NEXT_PUBLIC_APP_URI: http://localhost:3000
+      OPENAI_API_KEY: build-placeholder
+      E2B_API_KEY: build-placeholder
+      VIBE_TEMPLATE: tests-default-team-30d4/vibe-nextjs-dev
+      TAVILY_API_KEY: build-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
