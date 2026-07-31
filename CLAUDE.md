@@ -2,6 +2,8 @@
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
+> **Read [`AGENTS.md`](./AGENTS.md) alongside this file.** It documents project-specific facts — stack, commands, architecture, and git workflow. These behavioral guidelines apply to every task in this repo; where they conflict with project facts, `AGENTS.md` wins.
+
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
 ## 1. Think Before Coding

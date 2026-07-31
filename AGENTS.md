@@ -4,6 +4,8 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+> **Read [`CLAUDE.md`](./CLAUDE.md) alongside this file.** It defines the behavioral standards for all work here — think before coding, simplicity first, surgical changes, goal-driven execution. This file contains project-specific facts; `CLAUDE.md` contains how to work. Where they conflict, this file wins.
+
 # Vibe
 
 A Next.js app where a user prompt kicks off a **coding agent** (Inngest + Agent Kit) that builds a custom Next.js/shadcn app live inside an **E2B sandbox**, then reports back a summary + a shareable live-view URL that gets saved to the database.
