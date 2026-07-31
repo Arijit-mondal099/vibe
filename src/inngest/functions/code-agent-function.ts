@@ -1,7 +1,8 @@
 import { createNetwork } from "@inngest/agent-kit";
 import { inngest } from "../client";
 import { getSandbox, getSandboxId, MAX_ITER } from "../utils";
-import { createCodingAgent } from "./agents/coding-agent";
+import { AgentState, createCodingAgent } from "./agents/coding-agent";
+import { db } from "@/lib/db";
 
 export const codeAgentFunction = inngest.createFunction(
   {
@@ -23,12 +24,12 @@ export const codeAgentFunction = inngest.createFunction(
     const codingAgent = createCodingAgent(sandboxId);
 
     /** Create coding agent network **/
-    const network = createNetwork({
+    const network = createNetwork<AgentState>({
       name: "coding-agent-network",
       agents: [codingAgent],
       maxIter: MAX_ITER,
       router: async ({ network }) => {
-        const summary = network.state.data?.state;
+        const summary = network.state.data?.summary;
         if (summary) return;
         return codingAgent;
       },
@@ -36,6 +37,10 @@ export const codeAgentFunction = inngest.createFunction(
 
     /** Run coding agent via network **/
     const result = await network.run(event.data.prompt);
+
+    const isError =
+      !result.state.data?.summary ||
+      Object.keys(result.state.data?.files || {}).length === 0;
 
     /** Get sandbox url to see live view **/
     const sandboxUrl = await step.run("get-sandbox-url", async () => {
@@ -45,6 +50,34 @@ export const codeAgentFunction = inngest.createFunction(
       } catch {
         return "unavailable";
       }
+    });
+
+    /** Save the agent response to the db **/
+    await step.run("save-to-db", async () => {
+      if (isError) {
+        return await db.message.create({
+          data: {
+            content: "Something went wrong. Please try again.",
+            role: "ASSISTANT",
+            type: "ERROR",
+          },
+        });
+      }
+
+      return await db.message.create({
+        data: {
+          content: result.state.data.summary,
+          role: "ASSISTANT",
+          type: "RESULT",
+          fragment: {
+            create: {
+              sandBoxUrl: sandboxUrl,
+              files: result.state.data.files,
+              title: "fragment",
+            },
+          },
+        },
+      });
     });
 
     return {

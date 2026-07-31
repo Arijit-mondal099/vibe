@@ -1,8 +1,9 @@
-import { createTool } from "@inngest/agent-kit";
+import { createTool, type Tool } from "@inngest/agent-kit";
 import { z } from "zod";
 
 import { getSandbox } from "@/inngest/utils";
 import { validatePath } from "./helpers";
+import { AgentState } from "../../agents/coding-agent";
 
 /**
  * Agent tool: write one or more files into the sandbox project directory.
@@ -36,8 +37,8 @@ export const createOrUpdateFiles = (sandboxId: string) => {
         }),
       ),
     }),
-    
-    handler: async ({ files }, { step, network }) => {
+
+    handler: async ({ files }, { step, network }: Tool.Options<AgentState>) => {
       const result = await step?.run("create-or-update-files", async () => {
         try {
           // Load existing file registry from network state, or start fresh
