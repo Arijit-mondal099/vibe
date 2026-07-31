@@ -7,8 +7,13 @@ import { webSearch } from "../tools/web-search/tool";
 import { PROMPT } from "../prompts/build-prompt";
 import { lastAssistantTextMessageContent } from "@/inngest/utils";
 
+export interface AgentState {
+  summary: string,
+  files: { [path: string]: string }
+}
+
 export const createCodingAgent = (sandboxId: string) => {
-  return createAgent({
+  return createAgent<AgentState>({
     name: "coding-agent",
     description: "An expert coding agent.",
     system: PROMPT,
