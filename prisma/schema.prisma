@@ -17,15 +17,31 @@ enum MessageType {
   ERROR
 }
 
+model Project {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // not a database column ORM only
+  // a Project has many Messages
+  messages Message[]
+}
+
 model Message {
   id        String      @id @default(uuid())
   content   String
   role      MessageRole
   type      MessageType
+  // Foreign key column (actual database column), Points to Project.id
+  projectId String
+  // Relation field (ORM only; tells Prisma how to resolve the foreign key)
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
   fragment Fragment?
+  @@index([projectId])
 }
 
 model Fragment {
