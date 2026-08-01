@@ -1,20 +1,17 @@
+import { z } from "zod";
+import { generateSlug } from "random-word-slugs";
+
+import { db } from "@/lib/db";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
-import { db } from "@/lib/db";
-import { z } from "zod";
 
-export const messageRouter = createTRPCRouter({
+export const projectRouter = createTRPCRouter({
   getMany: baseProcedure.query(async () => {
-    const messages = await db.message.findMany({
-      include: {
-        fragment: true,
-      },
-      orderBy: {
-        updatedAt: "asc",
-      },
+    const projects = await db.project.findMany({
+      orderBy: { createdAt: "asc" },
     });
 
-    return messages;
+    return projects;
   }),
 
   create: baseProcedure
@@ -24,17 +21,20 @@ export const messageRouter = createTRPCRouter({
           .string()
           .min(1, { error: "Prompt is required!" })
           .max(10000, { error: "Prompt is too long!" }),
-        projectId: z.string().min(1, { error: "Project ID is required" }),
       }),
     )
     .mutation(async ({ input }) => {
-      /** Store user message to db **/
-      const createdMessage = await db.message.create({
+      /** create project with message **/
+      const newProject = await db.project.create({
         data: {
-          projectId: input.projectId,
-          content: input.prompt,
-          role: "USER",
-          type: "RESULT",
+          name: generateSlug(2, { format: "kebab" }),
+          messages: {
+            create: {
+              content: input.prompt,
+              role: "USER",
+              type: "RESULT",
+            },
+          },
         },
       });
 
@@ -43,10 +43,10 @@ export const messageRouter = createTRPCRouter({
         name: "code-agent/run",
         data: {
           prompt: input.prompt,
-          projectId: input.projectId,
+          projectId: newProject.id,
         },
       });
 
-      return createdMessage;
+      return newProject;
     }),
 });
