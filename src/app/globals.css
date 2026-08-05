@@ -128,3 +128,19 @@
     @apply font-sans;
   }
 }
+
+@keyframes spinScale {
+  0% {
+    transform: rotate(0deg) scale(0.5);
+  }
+  50% {
+    transform: rotate(180deg) scale(1);
+  }
+  100% {
+    transform: rotate(360deg) scale(0.5);
+  }
+}
+
+.animate-spin-scale {
+  animation: spinScale 2s linear infinite;
+}

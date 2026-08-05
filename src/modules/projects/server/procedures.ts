@@ -4,8 +4,32 @@ import { generateSlug } from "random-word-slugs";
 import { db } from "@/lib/db";
 import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
+import { TRPCError } from "@trpc/server";
 
 export const projectRouter = createTRPCRouter({
+  getOne: baseProcedure
+    .input(
+      z.object({
+        id: z.string().min(1, { error: "ID is required" }),
+      }),
+    )
+    .query(async ({ input }) => {
+      const project = await db.project.findUnique({
+        where: {
+          id: input.id,
+        },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Project not found with ID: ${input.id}`,
+        });
+      }
+
+      return project;
+    }),
+
   getMany: baseProcedure.query(async () => {
     const projects = await db.project.findMany({
       orderBy: { createdAt: "asc" },
