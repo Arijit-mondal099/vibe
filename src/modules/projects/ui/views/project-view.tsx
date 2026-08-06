@@ -1,6 +1,7 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
+import { Fragment } from "@/generated/prisma/client";
 
 import {
   ResizableHandle,
@@ -8,12 +9,15 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { MessagesContainer } from "../components/messages-container";
+import { ProjectHeader } from "../components/project-header";
 
 interface Props {
   projectId: string;
 }
 
 export const ProjectView: React.FC<Props> = ({ projectId }) => {
+  const [activeFragment, setActiveFragment] = useState<Fragment | null>(null);
+
   return (
     <div className="h-screen w-full">
       <ResizablePanelGroup orientation="horizontal">
@@ -22,8 +26,16 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
           minSize="15%"
           className="flex flex-col min-h-0"
         >
+          <Suspense fallback={<p>Loading project...</p>}>
+            <ProjectHeader projectId={projectId} />
+          </Suspense>
+
           <Suspense fallback={<p>loading...</p>}>
-            <MessagesContainer projectId={projectId} />
+            <MessagesContainer
+              projectId={projectId}
+              activeFragment={activeFragment}
+              setActiveFragment={setActiveFragment}
+            />
           </Suspense>
         </ResizablePanel>
 
