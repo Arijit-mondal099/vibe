@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextareaAutosize from "react-textarea-autosize";
 import { z } from "zod";
@@ -34,6 +34,7 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
   const queryClient = useQueryClient();
   const form = useForm<FormType>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       prompt: "",
     },
@@ -61,14 +62,15 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
   };
 
   const isPending: boolean = createMessage.isPending;
-  const isDisable: boolean = createMessage.isPending || form.formState.isValid;
+  const prompt = useWatch({ control: form.control, name: "prompt" });
+  const isDisable: boolean = isPending || prompt.trim() === "" || prompt.trim().length > 10000 || !form.formState.isValid;
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldGroup
         className={cn(
           "relative border p-4 pt-1 rounded-xl bg-sidebar dark:bg-sidebar transition-all",
-          isFocused && "shadow-xs ring-2 ring-gray-200",
+          isFocused && "shadow-xs ring-2 ring-gray-200 dark:ring-gray-800",
           showUsage && "rounded-t-none",
         )}
       >
@@ -102,8 +104,8 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
           {isPending ? (
             <Image
               src={"/logo.svg"}
-              width={24}
-              height={24}
+              width={22}
+              height={22}
               alt="vibe"
               className="shrink-0 animate-spin-scale"
             />
