@@ -6,10 +6,11 @@ import { readFiles } from "../tools/read/tool";
 import { webSearch } from "../tools/web-search/tool";
 import { PROMPT } from "../prompts/build-prompt";
 import { lastAssistantTextMessageContent } from "@/inngest/utils";
+import { Files } from "@/types";
 
 export interface AgentState {
   summary: string,
-  files: { [path: string]: string }
+  files: Files
 }
 
 export const createCodingAgent = (sandboxId: string) => {
