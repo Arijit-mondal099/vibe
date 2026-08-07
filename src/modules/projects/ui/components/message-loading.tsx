@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
+import { Marker, MarkerContent } from "@/components/ui/marker";
+
 const ShimmerMessages = () => {
   const [currentMessageIdx, setCurrentMessageIdx] = useState<number>(0);
 
@@ -39,9 +41,11 @@ const ShimmerMessages = () => {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground animate-pulse">
-        {messages[currentMessageIdx]}
-      </span>
+      <Marker role="status">
+        <MarkerContent className="shimmer text-sm text-muted-foreground">
+          {messages[currentMessageIdx]}
+        </MarkerContent>
+      </Marker>
     </div>
   );
 };
