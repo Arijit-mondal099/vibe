@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-
-import { z } from "zod";
+import { useClerk } from "@clerk/nextjs";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import TextareaAutosize from "react-textarea-autosize";
 import { ArrowUpIcon } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
@@ -32,8 +32,10 @@ export const ProjectForm = () => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const router = useRouter();
 
+  const clerk = useClerk();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+
   const form = useForm<FormType>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
@@ -50,6 +52,12 @@ export const ProjectForm = () => {
       },
       onError: (err) => {
         toast.error(err.message);
+        if (err.data?.code === "UNAUTHORIZED") {
+          clerk.openSignIn();
+        }
+        if (err?.data?.code === "TOO_MANY_REQUESTS") {
+          router.push("/pricing");
+        }
       },
     }),
   );

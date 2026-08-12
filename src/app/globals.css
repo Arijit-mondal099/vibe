@@ -55,6 +55,9 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+
+  --animate-sway: sway 1s infinite;
+  --animate-spin-scale: spin-scale 2s ease-in-out infinite;
 }
 
 :root {
@@ -212,8 +215,16 @@
   }
 }
 
-.animate-spin-scale {
-  animation: spin-scale 2s linear infinite;
+/* Left to right and right to left bounce animation */
+@keyframes sway {
+  0%, 100% {
+    transform: translateX(-50%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
 }
 
 /* Custom scrollbar - applies globally */

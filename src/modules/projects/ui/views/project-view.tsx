@@ -18,6 +18,7 @@ import { MessagesContainer } from "../components/messages-container";
 import { ProjectHeader } from "../components/project-header";
 import { FragmentWeb } from "../components/fragment-web";
 import { FileExplorer } from "@/components/file-explorer";
+import { UserControl } from "@/components/user-control";
 
 interface Props {
   projectId: string;
@@ -70,11 +71,13 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
               </TabsList>
 
               <div className="ml-auto flex items-center gap-x-2">
-                <Button asChild size="sm" variant="default">
+                <Button asChild size="sm" variant="pricing">
                   <Link href="/pricing">
                     <CrownIcon /> Upgrade
                   </Link>
                 </Button>
+
+                <UserControl />
               </div>
             </div>
 
@@ -83,9 +86,7 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
             </TabsContent>
             <TabsContent value="code" className="min-h-0">
               {activeFragment && !!activeFragment.files && (
-                <FileExplorer
-                  files={activeFragment.files as Files}
-                />
+                <FileExplorer files={activeFragment.files as Files} />
               )}
             </TabsContent>
           </Tabs>
