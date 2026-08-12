@@ -50,21 +50,26 @@ const FragmentCard: React.FC<FragmentCardProps> = ({
   return (
     <button
       className={cn(
-        "flex items-start text-start gap-2 border rounded-lg bg-muted w-fit p-3 hover:bg-secondary transition-colors",
+        "flex items-start text-start gap-2 border rounded-lg bg-muted p-3 hover:bg-secondary transition-colors w-full",
         isActiveFragment &&
           "bg-primary text-primary-foreground border-primary hover:bg-primary",
       )}
       onClick={() => onFragmentClick(fragment)}
     >
-      <Code2Icon className="size-4 mt-0.5" />
-      <div className="flex flex-col flex-1">
-        <span className="text-sm font-medium line-clamp-1">
-          {fragment.title}
-        </span>
-        <span className="text-sm">Preview</span>
-      </div>
-      <div className="flex items-center justify-center mt-0.5">
-        <ChevronRightIcon className="size-4" />
+      <div className="group flex items-center gap-2">
+        <Code2Icon className="size-4" />
+
+        <div className="text-sm mb-0.5">
+          <span className="font-medium truncate mr-2">{fragment.title}</span>
+          <span>Preview</span>
+        </div>
+
+        <ChevronRightIcon
+          className={cn(
+            "size-4 group-hover:animate-sway",
+            isActiveFragment && "animate-sway",
+          )}
+        />
       </div>
     </button>
   );
