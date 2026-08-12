@@ -1,22 +1,23 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { generateSlug } from "random-word-slugs";
 
 import { db } from "@/lib/db";
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
+import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
-import { TRPCError } from "@trpc/server";
 
 export const projectRouter = createTRPCRouter({
-  getOne: baseProcedure
+  getOne: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1, { error: "ID is required" }),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const project = await db.project.findUnique({
         where: {
           id: input.id,
+          userId: ctx.auth.userId,
         },
       });
 
@@ -30,15 +31,18 @@ export const projectRouter = createTRPCRouter({
       return project;
     }),
 
-  getMany: baseProcedure.query(async () => {
+  getMany: protectedProcedure.query(async ({ ctx }) => {
     const projects = await db.project.findMany({
+      where: {
+        userId: ctx.auth.userId,
+      },
       orderBy: { createdAt: "asc" },
     });
 
     return projects;
   }),
 
-  create: baseProcedure
+  create: protectedProcedure
     .input(
       z.object({
         prompt: z
@@ -47,11 +51,13 @@ export const projectRouter = createTRPCRouter({
           .max(10000, { error: "Prompt is too long!" }),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       /** create project with message **/
       const newProject = await db.project.create({
         data: {
           name: generateSlug(2, { format: "kebab" }),
+          userId: ctx.auth.userId,
+
           messages: {
             create: {
               content: input.prompt,

@@ -1,19 +1,24 @@
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
-import { inngest } from "@/inngest/client";
-import { db } from "@/lib/db";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
+import { inngest } from "@/inngest/client";
+import { db } from "@/lib/db";
+
 export const messageRouter = createTRPCRouter({
-  getMany: baseProcedure
+  getMany: protectedProcedure
     .input(
       z.object({
         projectId: z.string().min(1, { error: "Project ID is required" }),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const messages = await db.message.findMany({
         where: {
           projectId: input.projectId,
+          project: {
+            userId: ctx.auth.userId,
+          },
         },
         include: {
           fragment: true,
@@ -26,7 +31,7 @@ export const messageRouter = createTRPCRouter({
       return messages;
     }),
 
-  create: baseProcedure
+  create: protectedProcedure
     .input(
       z.object({
         prompt: z
@@ -36,11 +41,25 @@ export const messageRouter = createTRPCRouter({
         projectId: z.string().min(1, { error: "Project ID is required" }),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const existingProject = await db.project.findUnique({
+        where: {
+          id: input.projectId,
+          userId: ctx.auth.userId,
+        },
+      });
+
+      if (!existingProject) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found!",
+        });
+      }
+
       /** Store user message to db **/
       const createdMessage = await db.message.create({
         data: {
-          projectId: input.projectId,
+          projectId: existingProject.id,
           content: input.prompt,
           role: "USER",
           type: "RESULT",
