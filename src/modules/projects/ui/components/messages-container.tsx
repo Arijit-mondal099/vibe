@@ -22,6 +22,7 @@ export const MessagesContainer: React.FC<Props> = ({
   setActiveFragment,
 }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastAssiMsgIdRef = useRef<string | null>(null);
 
   const trpc = useTRPC();
   const { data: messages } = useSuspenseQuery(
@@ -34,17 +35,16 @@ export const MessagesContainer: React.FC<Props> = ({
     ),
   );
 
+  /**
+   * Set last assistant message fragment
+   * also user can change the message fragment
+   */
   useEffect(() => {
-    const lastAssistantMessageWithFragment = messages.findLast(
-      (msg) => msg.role === "ASSISTANT" && !!msg.fragment,
-    );
+    const lastAssiMsg = messages.findLast((msg) => msg.role === "ASSISTANT");
 
-    /**
-     * Set last assistant message fragment on first load as defalt selected
-     * also user can change the message fragment via onFragmentClick
-     */
-    if (lastAssistantMessageWithFragment) {
-      setActiveFragment(lastAssistantMessageWithFragment.fragment);
+    if (lastAssiMsg?.fragment && lastAssiMsg.id !== lastAssiMsgIdRef.current) {
+      setActiveFragment(lastAssiMsg.fragment);
+      lastAssiMsgIdRef.current = lastAssiMsg.id;
     }
   }, [messages, setActiveFragment]);
 
