@@ -20,7 +20,7 @@ export const ProjectLists = () => {
   }
 
   return (
-    <section className="w-full bg-white dark:bg-sidebar p-8 border flex flex-col gap-y-6 sm:gap-y-4">
+    <section className="w-full bg-white dark:bg-sidebar p-8 border flex flex-col gap-y-6 sm:gap-y-4 rounded-sm">
       <h2 className="text-2xl font-semibold">Saved Vibes</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
