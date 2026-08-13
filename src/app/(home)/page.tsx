@@ -17,7 +17,6 @@ export default async function Page() {
 
   return (
     <div className="flex flex-col max-w-5xl mx-auto w-full">
-      {/* hero section */}
       <section className="min-h-dvh flex flex-col items-center">
         <div className="flex-1 flex flex-col items-center justify-center gap-y-6 w-full">
           <Hint text="Hi, I'm Vibe. How can I help you today?">
@@ -27,8 +26,8 @@ export default async function Page() {
           </Hint>
 
           <h1 className="text-2xl md:text-5xl font-bold text-center">
-            {user
-              ? `What's cooking, ${user?.firstName}?`
+            {user?.firstName
+              ? `What's cooking, ${user.firstName}?`
               : "Build something with Vibe"}
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground text-center">
@@ -44,7 +43,7 @@ export default async function Page() {
           <div className="pb-8">
             <Link href="/vibes">
               <Button variant="outline" size="lg" className="group">
-                <span>{`${user.fullName}'s Vibes`}</span>
+                <span>My Vibes</span>
                 <ChevronRightIcon className="group-hover:animate-sway transition-all" />
               </Button>
             </Link>

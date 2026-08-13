@@ -3,6 +3,7 @@ import { Fragment, MessageType } from "@/generated/prisma/client";
 import { MessageRole } from "@/generated/prisma/enums";
 
 import { cn, formatRelativeDate } from "@/lib/utils";
+import { toast } from "sonner";
 
 import {
   ChevronRightIcon,
@@ -102,10 +103,14 @@ const AssistaintMessage: React.FC<AssistaintMessageProps> = ({
 }) => {
   const [isCopid, setIsCopid] = useState<boolean>(false);
 
-  const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content);
-    setIsCopid(true);
-    setTimeout(() => setIsCopid(false), 2000);
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setIsCopid(true);
+      setTimeout(() => setIsCopid(false), 2000);
+    } catch {
+      toast.error("Failed to copy message");
+    }
   };
 
   return (
@@ -126,10 +131,11 @@ const AssistaintMessage: React.FC<AssistaintMessageProps> = ({
           />
         )}
 
-        <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Copy message"
             disabled={isCopid}
             onClick={() => handleCopy(content)}
           >

@@ -20,9 +20,9 @@ interface FaqProps {
 
 const defaultItems: FaqItem[] = [
   {
-    question: "What is Mentis?",
+    question: "What is Vibe?",
     answer:
-      "Mentis is an agentic AI platform that lets you build and deploy autonomous agents for your workflows.",
+      "Vibe is an agentic AI platform that lets you build and deploy autonomous agents for your workflows.",
   },
   {
     question: "How do I get started?",

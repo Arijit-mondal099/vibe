@@ -9,7 +9,7 @@ export default function Page() {
           <SignIn />
         </div>
 
-        <div className="h-[54vh] w-[22vw] bg-destructive rounded-lg overflow-hidden hidden lg:block">
+        <div className="h-[54vh] w-full bg-destructive rounded-lg overflow-hidden hidden lg:block">
           <VideoPlayer path="/auth-hero.mp4" />
         </div>
       </section>

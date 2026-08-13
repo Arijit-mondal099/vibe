@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface PricingTier {
   name: string;
@@ -14,6 +15,10 @@ interface PricingTier {
   features: string[];
   cta: string;
   highlighted?: boolean;
+  /** Destination for link-based CTAs (e.g. "/sign-up", mailto:) */
+  href?: string;
+  /** Callback for button-based CTAs when no destination applies */
+  onAction?: () => void;
 }
 
 interface PricingProps {
@@ -30,6 +35,7 @@ const defaultTiers: PricingTier[] = [
     description: "For trying things out.",
     features: ["1 agent", "100 requests/mo", "Community support"],
     cta: "Get started",
+    href: "/sign-up",
   },
   {
     name: "Pro",
@@ -44,6 +50,7 @@ const defaultTiers: PricingTier[] = [
     ],
     cta: "Start free trial",
     highlighted: true,
+    href: "/sign-up",
   },
   {
     name: "Enterprise",
@@ -56,6 +63,7 @@ const defaultTiers: PricingTier[] = [
       "SSO & audit logs",
     ],
     cta: "Contact sales",
+    href: "mailto:hello@vibe.app",
   },
 ];
 
@@ -115,10 +123,16 @@ export function Pricing({
               </ul>
 
               <Button
+                asChild={!!tier.href}
+                onClick={tier.href ? undefined : tier.onAction}
                 className="mt-8 w-full"
                 variant={tier.highlighted ? "default" : "outline"}
               >
-                {tier.cta}
+                {tier.href ? (
+                  <Link href={tier.href}>{tier.cta}</Link>
+                ) : (
+                  tier.cta
+                )}
               </Button>
             </Card>
           ))}

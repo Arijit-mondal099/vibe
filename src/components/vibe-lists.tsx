@@ -8,8 +8,8 @@ import { useTRPC } from "@/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 
 import { formatRelativeDate } from "@/lib/utils";
-import { DeleteVibe } from "./delete-vibe";
-import { Card } from "./ui/card";
+import { DeleteVibe } from "@/components/delete-vibe";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 // Deterministic gradient per project so each row reads as its own "vibe"
@@ -48,7 +48,7 @@ export const VibeLists = () => {
     <section className="w-full flex flex-col gap-y-6 sm:gap-y-4">
       <div className="flex items-baseline justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">
-          {user.fullName}&apos;s Vibes
+          My Vibes
         </h2>
         {!!projects?.length && (
           <span className="text-sm text-muted-foreground tabular-nums">
@@ -131,7 +131,7 @@ export const VibeLists = () => {
               </Link>
 
               <div className="opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-within:opacity-100">
-                <DeleteVibe />
+                <DeleteVibe id={project.id} />
               </div>
             </Card>
           ))}
