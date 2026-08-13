@@ -9,6 +9,8 @@ import { Fragment } from "@/generated/prisma/client";
 import { MessageCard } from "./message-card";
 import { MessageForm } from "./message-form";
 import { MessageLoading } from "./message-loading";
+import Image from "next/image";
+import { Hint } from "@/components/hint";
 
 interface Props {
   projectId: string;
@@ -77,6 +79,17 @@ export const MessagesContainer: React.FC<Props> = ({
         </div>
 
         {isLastMessageUser && <MessageLoading />}
+        {!isLastMessageUser && (
+          <Hint text="Hi, I'm Vibe. How can I help you today?" side="right">
+            <Image
+              src={"/logo.svg"}
+              width={32}
+              height={32}
+              alt="vibe"
+              className="shrink-0 ml-4"
+            />
+          </Hint>
+        )}
         <div ref={scrollRef} />
       </div>
 

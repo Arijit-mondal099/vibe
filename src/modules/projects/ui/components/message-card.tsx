@@ -1,12 +1,18 @@
-import React from "react";
+import { useState } from "react";
 import { Fragment, MessageType } from "@/generated/prisma/client";
 import { MessageRole } from "@/generated/prisma/enums";
-import Image from "next/image";
 
 import { cn, formatRelativeDate } from "@/lib/utils";
+import { toast } from "sonner";
 
+import {
+  ChevronRightIcon,
+  Code2Icon,
+  CopyIcon,
+  CheckCheckIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ChevronRightIcon, Code2Icon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * User message component
@@ -59,8 +65,8 @@ const FragmentCard: React.FC<FragmentCardProps> = ({
       <div className="group flex items-center gap-2">
         <Code2Icon className="size-4" />
 
-        <div className="text-sm mb-0.5">
-          <span className="font-medium truncate mr-2">{fragment.title}</span>
+        <div className="text-sm mb-0.5 font-medium truncate capitalize">
+          <span className="mr-2">{fragment.title}</span>
           <span>Preview</span>
         </div>
 
@@ -95,25 +101,26 @@ const AssistaintMessage: React.FC<AssistaintMessageProps> = ({
   onFragmentClick,
   type,
 }) => {
+  const [isCopid, setIsCopid] = useState<boolean>(false);
+
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setIsCopid(true);
+      setTimeout(() => setIsCopid(false), 2000);
+    } catch {
+      toast.error("Failed to copy message");
+    }
+  };
+
   return (
     <div
       className={cn(
-        "flex flex-col group px-2 pb-4",
+        "flex flex-col group px-2 md:px-4 pb-4",
         type === "ERROR" && "text-red-700 dark:text-red-500",
       )}
     >
-      <div className="flex items-center gap-2 pl-2 mb-2">
-        <Image
-          src={"/logo.svg"}
-          width={22}
-          height={22}
-          alt="vibe"
-          className="shrink-0"
-        />
-        <span className="text-sm font-medium">Vibe</span>
-      </div>
-
-      <div className="pl-8 flex flex-col gap-y-4">
+      <div className="flex flex-col gap-y-4">
         <span>{content}</span>
         {/* render fragment */}
         {fragment && type === "RESULT" && (
@@ -124,9 +131,24 @@ const AssistaintMessage: React.FC<AssistaintMessageProps> = ({
           />
         )}
 
-        <span className="text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-          {formatRelativeDate(createdAt)}
-        </span>
+        <div className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Copy message"
+            disabled={isCopid}
+            onClick={() => handleCopy(content)}
+          >
+            {isCopid ? (
+              <CheckCheckIcon className="size-3" />
+            ) : (
+              <CopyIcon className="size-3" />
+            )}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {formatRelativeDate(createdAt)}
+          </span>
+        </div>
       </div>
     </div>
   );

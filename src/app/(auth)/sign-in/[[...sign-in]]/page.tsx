@@ -1,11 +1,16 @@
+import { VideoPlayer } from "@/components/video-player";
 import { SignIn } from "@clerk/nextjs";
 
 export default function Page() {
   return (
     <div className="flex flex-col max-w-3xl mx-auto w-full">
-      <section className="space-y-6 pt-[16vh] 2xl:pt-48">
+      <section className="space-y-6 pt-[16vh] 2xl:pt-48 grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col items-center">
           <SignIn />
+        </div>
+
+        <div className="h-[54vh] w-full bg-destructive rounded-lg overflow-hidden hidden lg:block">
+          <VideoPlayer path="/auth-hero.mp4" />
         </div>
       </section>
     </div>

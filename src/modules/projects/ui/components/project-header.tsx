@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import {
-  ChevronDown,
+  ChevronsUpDown,
   ChevronLeft,
   Monitor,
   MoonIcon,
@@ -42,7 +42,7 @@ export const ProjectHeader: React.FC<Props> = ({ projectId }) => {
   );
 
   return (
-    <header className="p-2 border-b flex justify-between items-center">
+    <header className="px-2 py-2.5 border-b flex justify-between items-center">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -58,7 +58,7 @@ export const ProjectHeader: React.FC<Props> = ({ projectId }) => {
               className="shrink-0"
             />
             <span className="text-base font-medium">{project.name}</span>
-            <ChevronDown className="size-4" />
+            <ChevronsUpDown className="size-4" />
           </Button>
         </DropdownMenuTrigger>
 
@@ -67,6 +67,13 @@ export const ProjectHeader: React.FC<Props> = ({ projectId }) => {
             <Link href="/">
               <ChevronLeft />
               <span>Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/vibes">
+              <ChevronLeft />
+              <span>Vibes</span>
             </Link>
           </DropdownMenuItem>
 

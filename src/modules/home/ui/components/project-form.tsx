@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,11 +27,21 @@ const formSchema = z.object({
 
 type FormType = z.infer<typeof formSchema>;
 
+// Key for the prompt draft handed off to /sign-in so an unauthenticated
+// submit doesn't lose the user's request when this component unmounts.
+const PROMPT_DRAFT_KEY = "vibe:project-prompt-draft";
+
+const readPromptDraft = (): string => {
+  if (typeof window === "undefined") return "";
+  const draft = sessionStorage.getItem(PROMPT_DRAFT_KEY);
+  sessionStorage.removeItem(PROMPT_DRAFT_KEY);
+  return draft ?? "";
+};
+
 export const ProjectForm = () => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const router = useRouter();
 
-  const clerk = useClerk();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -40,7 +49,7 @@ export const ProjectForm = () => {
     resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
-      prompt: "",
+      prompt: readPromptDraft(),
     },
   });
 
@@ -50,10 +59,11 @@ export const ProjectForm = () => {
         queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
         router.push(`/projects/${data.id}`);
       },
-      onError: (err) => {
+      onError: (err, variables) => {
         toast.error(err.message);
         if (err.data?.code === "UNAUTHORIZED") {
-          clerk.openSignIn();
+          sessionStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
+          router.push("/sign-in");
         }
         if (err?.data?.code === "TOO_MANY_REQUESTS") {
           router.push("/pricing");
