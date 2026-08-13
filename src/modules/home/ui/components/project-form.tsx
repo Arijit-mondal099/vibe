@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useClerk } from "@clerk/nextjs";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,7 +31,6 @@ export const ProjectForm = () => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const router = useRouter();
 
-  const clerk = useClerk();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -53,7 +51,7 @@ export const ProjectForm = () => {
       onError: (err) => {
         toast.error(err.message);
         if (err.data?.code === "UNAUTHORIZED") {
-          clerk.openSignIn();
+          router.push("/sign-in");
         }
         if (err?.data?.code === "TOO_MANY_REQUESTS") {
           router.push("/pricing");
