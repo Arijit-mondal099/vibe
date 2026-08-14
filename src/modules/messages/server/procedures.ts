@@ -4,6 +4,7 @@ import { z } from "zod";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 import { db } from "@/lib/db";
+import { consumeCredits } from "@/lib/usage";
 
 export const messageRouter = createTRPCRouter({
   getMany: protectedProcedure
@@ -54,6 +55,26 @@ export const messageRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Project not found!",
         });
+      }
+
+      /**
+       * Consume credits
+       * Validate user credits before create the message
+       **/
+      try {
+        await consumeCredits();
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Something went wrong...",
+          });
+        } else {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "You have run out of cradits",
+          });
+        }
       }
 
       /** Store user message to db **/

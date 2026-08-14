@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { generateSlug } from "random-word-slugs";
 
 import { db } from "@/lib/db";
+import { consumeCredits } from "@/lib/usage";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 
@@ -77,6 +78,26 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      /**
+       * Consume credits
+       * Validate user credits before create the project/vibe
+       **/
+      try {
+        await consumeCredits();
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Something went wrong...",
+          });
+        } else {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "You have run out of cradits",
+          });
+        }
+      }
+
       /** create project with message **/
       const newProject = await db.project.create({
         data: {

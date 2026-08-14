@@ -1,6 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
-const publicPaths = ["/", "/sign-in", "/sign-up", "/api"] as const;
+const publicPaths = ["/", "/sign-in", "/sign-up", "/pricing", "/api"] as const;
 
 function isPublicRoute(pathname: string) {
   return publicPaths.some(

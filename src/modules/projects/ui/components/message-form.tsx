@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextareaAutosize from "react-textarea-autosize";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowUpIcon } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
-import Image from "next/image";
+import { Usage } from "./usage";
 
 const formSchema = z.object({
   prompt: z
@@ -26,17 +28,26 @@ interface MessageFormProps {
   projectId: string;
 }
 
+const getDraftKey = (projectId: string) =>
+  `vibe:message-prompt-draft:${projectId}`;
+
+const peekMessageDraft = (projectId: string): string => {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(getDraftKey(projectId)) ?? "";
+};
+
 export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
-  const showUsage: boolean = false;
+  const router = useRouter();
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+
   const form = useForm<FormType>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
-      prompt: "",
+      prompt: peekMessageDraft(projectId),
     },
   });
 
@@ -47,9 +58,13 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
         queryClient.invalidateQueries(
           trpc.messages.getMany.queryOptions({ projectId }),
         );
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       },
       onError: (err) => {
         toast.error(err.message);
+        if (err.data?.code === "TOO_MANY_REQUESTS") {
+          router.push("/pricing");
+        }
       },
     }),
   );
@@ -61,12 +76,31 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
     });
   };
 
+  const { data: usage } = useQuery(trpc.usage.status.queryOptions());
+
   const isPending: boolean = createMessage.isPending;
   const prompt = useWatch({ control: form.control, name: "prompt" });
-  const isDisable: boolean = isPending || prompt.trim() === "" || prompt.trim().length > 10000 || !form.formState.isValid;
+  const isDisable: boolean =
+    isPending ||
+    prompt.trim() === "" ||
+    prompt.trim().length > 10000 ||
+    !form.formState.isValid;
+  const showUsage: boolean = !!usage;
+
+  // Persist the in-progress draft on every change, so a reload or
+  // closing the app doesn't lose it. Scoped per project.
+  useEffect(() => {
+    localStorage.setItem(getDraftKey(projectId), prompt);
+  }, [prompt, projectId]);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
+      {showUsage && usage && (
+        <Usage
+          points={usage?.remainingPoints}
+          msBeforeNext={usage.msBeforeNext}
+        />
+      )}
       <FieldGroup
         className={cn(
           "relative border p-4 pt-1 rounded-xl bg-sidebar dark:bg-sidebar transition-all",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
@@ -33,9 +33,7 @@ const PROMPT_DRAFT_KEY = "vibe:project-prompt-draft";
 
 const readPromptDraft = (): string => {
   if (typeof window === "undefined") return "";
-  const draft = sessionStorage.getItem(PROMPT_DRAFT_KEY);
-  sessionStorage.removeItem(PROMPT_DRAFT_KEY);
-  return draft ?? "";
+  return localStorage.getItem(PROMPT_DRAFT_KEY) ?? "";
 };
 
 export const ProjectForm = () => {
@@ -57,15 +55,17 @@ export const ProjectForm = () => {
     trpc.projects.create.mutationOptions({
       onSuccess: (data) => {
         queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
         router.push(`/projects/${data.id}`);
       },
       onError: (err, variables) => {
         toast.error(err.message);
         if (err.data?.code === "UNAUTHORIZED") {
-          sessionStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
+          localStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
           router.push("/sign-in");
         }
         if (err?.data?.code === "TOO_MANY_REQUESTS") {
+          localStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
           router.push("/pricing");
         }
       },
@@ -93,6 +93,10 @@ export const ProjectForm = () => {
     prompt.trim() === "" ||
     prompt.trim().length > 10000 ||
     !form.formState.isValid;
+
+  useEffect(() => {
+    localStorage.removeItem(PROMPT_DRAFT_KEY);
+  }, []);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
