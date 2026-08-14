@@ -43,7 +43,7 @@ export default async function Page() {
           <div className="pb-8">
             <Link href="/vibes">
               <Button variant="outline" size="lg" className="group">
-                <span>{user.fullName}&apos; Vibes</span>
+                <span>{user.fullName ? `${user.fullName}'s Vibes` : "My Vibes"}</span>
                 <ChevronRightIcon className="group-hover:animate-sway transition-all" />
               </Button>
             </Link>

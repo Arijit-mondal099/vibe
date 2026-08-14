@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FC, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ interface Props {
   name: string;
 }
 
-export const DeleteVibe: React.FC<Props> = ({ id, name }) => {
+export const DeleteVibe: FC<Props> = ({ id, name }) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
@@ -54,7 +54,11 @@ export const DeleteVibe: React.FC<Props> = ({ id, name }) => {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="destructive" size="icon">
+        <Button
+          variant="destructive"
+          size="icon"
+          aria-label={`Delete vibe: ${name}`}
+        >
           <Trash2 />
         </Button>
       </DialogTrigger>
