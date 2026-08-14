@@ -36,6 +36,18 @@ export async function consumeCredits() {
   return result;
 }
 
+// Inverse of consumeCredits: gives the credit back when post-charge work
+// (message/project creation, code-agent dispatch) fails so it isn't lost.
+export async function restoreCredits() {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("User is not authenticated!");
+  }
+
+  const usageTracker = await getUsageTracker();
+  await usageTracker.reward(userId, GENERATION_COST);
+}
+
 export async function getUsageStatus() {
   const { userId } = await auth();
   if (!userId) {

@@ -1,13 +1,16 @@
+import { TRPCError } from "@trpc/server";
 import { getUsageStatus } from "@/lib/usage";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 
 export const usageRouter = createTRPCRouter({
   status: protectedProcedure.query(async () => {
     try {
-      const result = await getUsageStatus();
-      return result;
+      return await getUsageStatus();
     } catch {
-      return null;
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to load usage data.",
+      });
     }
   }),
 });

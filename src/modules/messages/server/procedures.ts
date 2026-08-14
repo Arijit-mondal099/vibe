@@ -4,7 +4,7 @@ import { z } from "zod";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 import { db } from "@/lib/db";
-import { consumeCredits } from "@/lib/usage";
+import { consumeCredits, restoreCredits } from "@/lib/usage";
 
 export const messageRouter = createTRPCRouter({
   getMany: protectedProcedure
@@ -72,30 +72,38 @@ export const messageRouter = createTRPCRouter({
         } else {
           throw new TRPCError({
             code: "TOO_MANY_REQUESTS",
-            message: "You have run out of cradits",
+            message: "You have run out of credits",
           });
         }
       }
 
-      /** Store user message to db **/
-      const createdMessage = await db.message.create({
-        data: {
-          projectId: existingProject.id,
-          content: input.prompt,
-          role: "USER",
-          type: "RESULT",
-        },
-      });
+      try {
+        /** Store user message to db **/
+        const createdMessage = await db.message.create({
+          data: {
+            projectId: existingProject.id,
+            content: input.prompt,
+            role: "USER",
+            type: "RESULT",
+          },
+        });
 
-      /** Triger code agent background job **/
-      await inngest.send({
-        name: "code-agent/run",
-        data: {
-          prompt: input.prompt,
-          projectId: input.projectId,
-        },
-      });
+        /** Triger code agent background job **/
+        await inngest.send({
+          name: "code-agent/run",
+          data: {
+            prompt: input.prompt,
+            projectId: input.projectId,
+          },
+        });
 
-      return createdMessage;
+        return createdMessage;
+      } catch (error) {
+        // Post-charge work failed before the job was accepted: give the
+        // consumed credit back so it isn't lost, then surface the original
+        // error. A restore failure must not mask the real cause.
+        await restoreCredits().catch(() => undefined);
+        throw error;
+      }
     }),
 });

@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { generateSlug } from "random-word-slugs";
 
 import { db } from "@/lib/db";
-import { consumeCredits } from "@/lib/usage";
+import { consumeCredits, restoreCredits } from "@/lib/usage";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 
@@ -93,36 +93,44 @@ export const projectRouter = createTRPCRouter({
         } else {
           throw new TRPCError({
             code: "TOO_MANY_REQUESTS",
-            message: "You have run out of cradits",
+            message: "You have run out of credits",
           });
         }
       }
 
-      /** create project with message **/
-      const newProject = await db.project.create({
-        data: {
-          name: generateSlug(2, { format: "kebab" }),
-          userId: ctx.auth.userId,
+      try {
+        /** create project with message **/
+        const newProject = await db.project.create({
+          data: {
+            name: generateSlug(2, { format: "kebab" }),
+            userId: ctx.auth.userId,
 
-          messages: {
-            create: {
-              content: input.prompt,
-              role: "USER",
-              type: "RESULT",
+            messages: {
+              create: {
+                content: input.prompt,
+                role: "USER",
+                type: "RESULT",
+              },
             },
           },
-        },
-      });
+        });
 
-      /** Triger code agent background job **/
-      await inngest.send({
-        name: "code-agent/run",
-        data: {
-          prompt: input.prompt,
-          projectId: newProject.id,
-        },
-      });
+        /** Triger code agent background job **/
+        await inngest.send({
+          name: "code-agent/run",
+          data: {
+            prompt: input.prompt,
+            projectId: newProject.id,
+          },
+        });
 
-      return newProject;
+        return newProject;
+      } catch (error) {
+        // Post-charge work failed before the job was accepted: give the
+        // consumed credit back so it isn't lost, then surface the original
+        // error. A restore failure must not mask the real cause.
+        await restoreCredits().catch(() => undefined);
+        throw error;
+      }
     }),
 });
