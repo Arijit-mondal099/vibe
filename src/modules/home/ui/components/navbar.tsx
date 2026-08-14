@@ -4,12 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { SignInButton, SignUpButton, Show } from "@clerk/nextjs";
 
+import { cn } from "@/lib/utils";
+import { useScroll } from "@/hooks/use-scroll";
 import { Button } from "@/components/ui/button";
 import { UserControl } from "@/components/user-control";
 
 export const Navbar = () => {
+  const isScrolled = useScroll();
+
   return (
-    <header className="fixed top-0 right-0 left-0 z-50 p-4 bg-transparent border-b border-transparent transition-all duration-200">
+    <header
+      className={cn(
+        "fixed top-0 right-0 left-0 z-50 p-4 bg-transparent border-b border-transparent transition-all duration-200",
+        isScrolled && "bg-background/50 backdrop-blur-xs border-border",
+      )}
+    >
       <nav className="max-w-5xl mx-auto w-full flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2">
           <Image

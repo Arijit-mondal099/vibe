@@ -4,6 +4,7 @@ import { z } from "zod";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 import { db } from "@/lib/db";
+import { consumeCredits, restoreCredits } from "@/lib/usage";
 
 export const messageRouter = createTRPCRouter({
   getMany: protectedProcedure
@@ -56,25 +57,53 @@ export const messageRouter = createTRPCRouter({
         });
       }
 
-      /** Store user message to db **/
-      const createdMessage = await db.message.create({
-        data: {
-          projectId: existingProject.id,
-          content: input.prompt,
-          role: "USER",
-          type: "RESULT",
-        },
-      });
+      /**
+       * Consume credits
+       * Validate user credits before create the message
+       **/
+      try {
+        await consumeCredits();
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Something went wrong...",
+          });
+        } else {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "You have run out of credits",
+          });
+        }
+      }
 
-      /** Triger code agent background job **/
-      await inngest.send({
-        name: "code-agent/run",
-        data: {
-          prompt: input.prompt,
-          projectId: input.projectId,
-        },
-      });
+      try {
+        /** Store user message to db **/
+        const createdMessage = await db.message.create({
+          data: {
+            projectId: existingProject.id,
+            content: input.prompt,
+            role: "USER",
+            type: "RESULT",
+          },
+        });
 
-      return createdMessage;
+        /** Triger code agent background job **/
+        await inngest.send({
+          name: "code-agent/run",
+          data: {
+            prompt: input.prompt,
+            projectId: input.projectId,
+          },
+        });
+
+        return createdMessage;
+      } catch (error) {
+        // Post-charge work failed before the job was accepted: give the
+        // consumed credit back so it isn't lost, then surface the original
+        // error. A restore failure must not mask the real cause.
+        await restoreCredits().catch(() => undefined);
+        throw error;
+      }
     }),
 });

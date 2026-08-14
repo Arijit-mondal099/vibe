@@ -62,7 +62,7 @@ export const MessagesContainer: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-48">
         <div className="pt-2 pr-1">
           {messages.map((msg) => (
             <MessageCard

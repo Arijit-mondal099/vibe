@@ -2,6 +2,7 @@
 
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import { Code2Icon, CrownIcon, EyeIcon } from "lucide-react";
 
 import { Fragment } from "@/generated/prisma/client";
@@ -27,6 +28,8 @@ interface Props {
 export const ProjectView: React.FC<Props> = ({ projectId }) => {
   const [activeFragment, setActiveFragment] = useState<Fragment | null>(null);
   const [tabState, setTabState] = useState<"preview" | "code">("preview");
+  const { has } = useAuth();
+  const hasProAccess = has({ plan: "pro" });
 
   return (
     <div className="h-screen w-full">
@@ -71,11 +74,13 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
               </TabsList>
 
               <div className="ml-auto flex items-center gap-x-2">
-                <Button asChild size="sm" variant="pricing">
-                  <Link href="/pricing">
-                    <CrownIcon /> Upgrade
-                  </Link>
-                </Button>
+                {!hasProAccess && (
+                  <Button asChild size="sm" variant="pricing">
+                    <Link href="/pricing">
+                      <CrownIcon /> Upgrade
+                    </Link>
+                  </Button>
+                )}
 
                 <UserControl />
               </div>

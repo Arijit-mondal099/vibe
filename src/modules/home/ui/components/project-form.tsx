@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
@@ -29,13 +29,40 @@ type FormType = z.infer<typeof formSchema>;
 
 // Key for the prompt draft handed off to /sign-in so an unauthenticated
 // submit doesn't lose the user's request when this component unmounts.
+// The draft is intentionally ephemeral: it must not persist long enough
+// to leak from one account to another sharing the same browser.
 const PROMPT_DRAFT_KEY = "vibe:project-prompt-draft";
+const PROMPT_DRAFT_TTL_MS = 5 * 60 * 1000;
+
+interface PromptDraft {
+  value: string;
+  expiresAt: number;
+}
 
 const readPromptDraft = (): string => {
   if (typeof window === "undefined") return "";
-  const draft = sessionStorage.getItem(PROMPT_DRAFT_KEY);
-  sessionStorage.removeItem(PROMPT_DRAFT_KEY);
-  return draft ?? "";
+  const raw = localStorage.getItem(PROMPT_DRAFT_KEY);
+  if (!raw) return "";
+  try {
+    const draft: PromptDraft = JSON.parse(raw);
+    if (typeof draft?.value !== "string") return "";
+    if (draft.expiresAt <= Date.now()) {
+      localStorage.removeItem(PROMPT_DRAFT_KEY);
+      return "";
+    }
+    return draft.value;
+  } catch {
+    return "";
+  }
+};
+
+const writePromptDraft = (prompt: string) => {
+  if (typeof window === "undefined") return;
+  const draft: PromptDraft = {
+    value: prompt,
+    expiresAt: Date.now() + PROMPT_DRAFT_TTL_MS,
+  };
+  localStorage.setItem(PROMPT_DRAFT_KEY, JSON.stringify(draft));
 };
 
 export const ProjectForm = () => {
@@ -57,15 +84,17 @@ export const ProjectForm = () => {
     trpc.projects.create.mutationOptions({
       onSuccess: (data) => {
         queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
         router.push(`/projects/${data.id}`);
       },
       onError: (err, variables) => {
         toast.error(err.message);
         if (err.data?.code === "UNAUTHORIZED") {
-          sessionStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
+          writePromptDraft(variables.prompt);
           router.push("/sign-in");
         }
         if (err?.data?.code === "TOO_MANY_REQUESTS") {
+          writePromptDraft(variables.prompt);
           router.push("/pricing");
         }
       },
@@ -93,6 +122,10 @@ export const ProjectForm = () => {
     prompt.trim() === "" ||
     prompt.trim().length > 10000 ||
     !form.formState.isValid;
+
+  useEffect(() => {
+    localStorage.removeItem(PROMPT_DRAFT_KEY);
+  }, []);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

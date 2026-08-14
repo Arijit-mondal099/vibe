@@ -1,17 +1,22 @@
-import { useState } from "react";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import TextareaAutosize from "react-textarea-autosize";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowUpIcon } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup } from "@/components/ui/field";
-import Image from "next/image";
+import { Usage } from "./usage";
 
 const formSchema = z.object({
   prompt: z
@@ -26,17 +31,31 @@ interface MessageFormProps {
   projectId: string;
 }
 
+const getDraftKey = (userId: string, projectId: string) =>
+  `vibe:message-prompt-draft:${userId}:${projectId}`;
+
+const peekMessageDraft = (userId: string, projectId: string): string => {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(getDraftKey(userId, projectId)) ?? "";
+};
+
 export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
-  const showUsage: boolean = false;
+  const router = useRouter();
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+
+  const { userId } = useAuth();
+  // Tracks the authenticated identity across renders so draft cleanup can
+  // react to sign-out / account switches.
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
   const form = useForm<FormType>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
-      prompt: "",
+      prompt: userId ? peekMessageDraft(userId, projectId) : "",
     },
   });
 
@@ -47,9 +66,13 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
         queryClient.invalidateQueries(
           trpc.messages.getMany.queryOptions({ projectId }),
         );
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       },
       onError: (err) => {
         toast.error(err.message);
+        if (err.data?.code === "TOO_MANY_REQUESTS") {
+          router.push("/pricing");
+        }
       },
     }),
   );
@@ -61,12 +84,52 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
     });
   };
 
+  const { data: usage } = useQuery(trpc.usage.status.queryOptions());
+
   const isPending: boolean = createMessage.isPending;
   const prompt = useWatch({ control: form.control, name: "prompt" });
-  const isDisable: boolean = isPending || prompt.trim() === "" || prompt.trim().length > 10000 || !form.formState.isValid;
+  const isDisable: boolean =
+    isPending ||
+    prompt.trim() === "" ||
+    prompt.trim().length > 10000 ||
+    !form.formState.isValid;
+  const showUsage: boolean = !!usage;
+
+  // Persist the in-progress draft on every change, so a reload or
+  // closing the app doesn't lose it. Scoped per user + project so drafts
+  // never cross authenticated accounts.
+  useEffect(() => {
+    if (!userId) return;
+    localStorage.setItem(getDraftKey(userId, projectId), prompt);
+  }, [prompt, projectId, userId]);
+
+  // At the authentication boundary (sign-out or account switch), drop the
+  // previous user's drafts so they can't be resurrected by the next session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const prev = prevUserIdRef.current;
+    if (prev && prev !== userId) {
+      const prefix = `vibe:message-prompt-draft:${prev}:`;
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("vibe:message-prompt-draft:") && key.startsWith(prefix)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+    }
+    prevUserIdRef.current = userId;
+  }, [userId]);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
+      {showUsage && usage && (
+        <Usage
+          points={usage?.remainingPoints}
+          msBeforeNext={usage.msBeforeNext}
+        />
+      )}
       <FieldGroup
         className={cn(
           "relative border p-4 pt-1 rounded-xl bg-sidebar dark:bg-sidebar transition-all",

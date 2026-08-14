@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -31,39 +31,35 @@ const defaultTiers: PricingTier[] = [
   {
     name: "Free",
     price: "$0",
-    period: "/mo",
-    description: "For trying things out.",
-    features: ["1 agent", "100 requests/mo", "Community support"],
+    period: "Always free",
+    description: "For getting started",
+    features: [
+      "5 monthly credits",
+      "Public vibes",
+      "Community support",
+      "Basic templates",
+    ],
     cta: "Get started",
     href: "/sign-up",
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "$30",
     period: "/mo",
-    description: "For individuals shipping real products.",
+    description: "For more vibes and usage — Yearly available: $25/mo",
     features: [
-      "10 agents",
-      "10,000 requests/mo",
+      "100 credits monthly",
+      "Public vibes",
+      "Private vibes",
       "Priority support",
+      "Advanced analytics",
       "Custom workflows",
+      "Early access",
+      "Higher credit limits",
     ],
-    cta: "Start free trial",
+    cta: "Get Pro",
     highlighted: true,
-    href: "/sign-up",
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    description: "For teams that need scale and control.",
-    features: [
-      "Unlimited agents",
-      "Unlimited requests",
-      "Dedicated support",
-      "SSO & audit logs",
-    ],
-    cta: "Contact sales",
-    href: "mailto:hello@vibe.app",
+    href: "/pricing",
   },
 ];
 
@@ -73,68 +69,120 @@ export function Pricing({
   tiers = defaultTiers,
 }: PricingProps) {
   return (
-    <section className="py-20">
-      <div className="mx-auto max-w-5xl px-4">
-        <div className="mb-12 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight">{heading}</h2>
-          <p className="mt-3 text-muted-foreground">{description}</p>
+    <section className="relative overflow-hidden py-24">
+      {/* ambient background accent */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / 0.08), transparent 70%)",
+        }}
+      />
+
+      <div className="mx-auto max-w-4xl px-4">
+        <div className="mb-14 text-center">
+          <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+            {heading}
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-balance text-muted-foreground">
+            {description}
+          </p>
         </div>
 
-        <div className="grid gap-6 pt-3 sm:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 sm:items-stretch">
           {tiers.map((tier) => (
-            <Card
+            <div
               key={tier.name}
               className={cn(
-                "relative flex flex-col overflow-visible p-6 pt-8 shadow-none",
-                tier.highlighted
-                  ? "border-primary/50 bg-primary/3 sm:-my-3 sm:py-9"
-                  : "border-border/60",
+                "relative rounded-[1.75rem]",
+                tier.highlighted &&
+                  "bg-linear-to-b from-primary/60 via-primary/20 to-transparent p-px shadow-[0_0_0_1px_hsl(var(--primary)/0.15),0_20px_50px_-20px_hsl(var(--primary)/0.35)]",
               )}
             >
-              {tier.highlighted && (
-                <Badge className="absolute -top-3 left-6 z-10">
-                  Most popular
-                </Badge>
-              )}
-
-              <h3 className="font-medium">{tier.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {tier.description}
-              </p>
-
-              <div className="mt-5 flex items-baseline gap-1">
-                <span className="text-3xl font-semibold tracking-tight">
-                  {tier.price}
-                </span>
-                {tier.period && (
-                  <span className="text-sm text-muted-foreground">
-                    {tier.period}
-                  </span>
+              <Card
+                className={cn(
+                  "relative flex h-full flex-col overflow-hidden rounded-[1.75rem] p-8 shadow-sm transition-shadow",
+                  tier.highlighted
+                    ? "border-0 bg-card"
+                    : "border-border/60 bg-card/60 hover:shadow-md",
                 )}
-              </div>
-
-              <ul className="mt-6 flex-1 space-y-3">
-                {tier.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span className="text-muted-foreground">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                asChild={!!tier.href}
-                onClick={tier.href ? undefined : tier.onAction}
-                className="mt-8 w-full"
-                variant={tier.highlighted ? "default" : "outline"}
               >
-                {tier.href ? (
-                  <Link href={tier.href}>{tier.cta}</Link>
-                ) : (
-                  tier.cta
+                {tier.highlighted && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl"
+                  />
                 )}
-              </Button>
-            </Card>
+
+                {tier.highlighted && (
+                  <Badge className="absolute right-6 top-6 gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide shadow-sm">
+                    <Sparkles className="h-3 w-3" />
+                    Most popular
+                  </Badge>
+                )}
+
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/80">
+                  {tier.name}
+                </h3>
+
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-5xl font-semibold tabular-nums tracking-tight">
+                    {tier.price}
+                  </span>
+                  {tier.period && (
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {tier.period}
+                    </span>
+                  )}
+                </div>
+
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {tier.description}
+                </p>
+
+                <div className="my-6 h-px w-full bg-border/60" />
+
+                <ul className="flex-1 space-y-3.5">
+                  {tier.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2.5 text-sm"
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                          tier.highlighted
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-primary/10 text-primary",
+                        )}
+                      >
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </span>
+                      <span className="text-foreground/80">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  asChild={!!tier.href}
+                  onClick={tier.href ? undefined : tier.onAction}
+                  size="lg"
+                  className={cn(
+                    "mt-8 w-full rounded-xl text-sm font-medium",
+                    tier.highlighted &&
+                      "shadow-[0_8px_20px_-6px_hsl(var(--primary)/0.5)]",
+                  )}
+                  variant={tier.highlighted ? "default" : "outline"}
+                >
+                  {!!tier.href ? (
+                    <Link href={tier.href}>{tier.cta}</Link>
+                  ) : (
+                    tier.cta
+                  )}
+                </Button>
+              </Card>
+            </div>
           ))}
         </div>
       </div>
