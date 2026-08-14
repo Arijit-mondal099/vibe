@@ -32,13 +32,15 @@ export function formatRelativeDate(date: Date | string) {
 
 // Example "3 days 5 hours"
 export function formatTimeUntil(msBeforeNext: number): string {
-  return formatDuration(
+  const formatted = formatDuration(
     intervalToDuration({
       start: new Date(),
       end: new Date(Date.now() + msBeforeNext),
     }),
-    { format: ["months", "days", "hours"] },
+    { format: ["months", "days", "hours", "minutes"] },
   );
+
+  return formatted || "less than a minute";
 }
 
 /**

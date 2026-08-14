@@ -45,6 +45,7 @@ bun run typecheck        # tsc --noEmit
 bun run db:generate      # (re)generate Prisma client into src/generated/prisma
 bun run db:push          # push schema to dev DB (no migration file)
 bun run db:migrate       # create + apply a migration (interactive)
+bun run db:migrate:create  # draft migration only (no apply; then db:migrate:deploy)
 bun run db:migrate:deploy  # apply migrations (production)
 bun run db:studio        # open Prisma Studio
 bun run inngest          # Inngest dev server (local event testing)
@@ -52,6 +53,10 @@ bun run template:build:dev   # build the dev E2B sandbox template
 bun run template:build:prod  # build the prod E2B sandbox template
 bun run template:list        # list E2B templates
 ```
+
+## Testing
+
+No unit-test runner is configured (no test script, no vitest/jest/playwright config, no app-level test files). Verification is `bun run lint` + `bun run typecheck` (+ `bun run build`); to exercise the running UI use the **webapp-testing** skill (Playwright, driven from Python scripts).
 
 ## Environment variables
 
@@ -69,6 +74,7 @@ All env vars are **validated at import time** in `src/lib/env.ts` via a Zod sche
 ```
 src/
   app/                     # App Router: routes, api routes (/api/trpc, /api/inngest)
+  proxy.ts                 # Clerk auth middleware — protects all non-public routes (Next 16 name)
   components/ui/           # shadcn/ui components (do not hand-edit; re-run shadcn add)
   generated/prisma/        # Prisma client (gitignored — run bun run db:generate)
   inngest/
@@ -83,8 +89,9 @@ src/
   lib/
     env.ts                 # Zod env validation (see above)
     db.ts                  # Prisma client singleton (cached on global in dev)
+    usage.ts               # credit consume/restore/status via rate-limiter-flexible (Usage table)
     utils.ts               # cn() helper
-  modules/<module>/server/procedures.ts  # tRPC procedures per feature
+  modules/<module>/server/procedures.ts  # tRPC procedures per feature; each module also owns its UI in <module>/ui/
   trpc/
     init.ts                # createTRPCContext, baseProcedure, createTRPCRouter
     client.tsx             # client provider (NEXT_PUBLIC_APP_URI for SSR base URL)
@@ -107,6 +114,9 @@ sandbox/nextjs/            # E2B sandbox template source
 - `src/lib/db.ts` reuses one client across dev hot-reloads via a `global` cache (`env.NODE_ENV !== "production"`). Do not import `PrismaClient` from `@prisma/client` and do not instantiate your own in modules.
 - After editing `prisma/schema.prisma`, run `bun run db:generate` (client is gitignored). Prisma 7 uses `prisma.config.ts` for the datasource URL; no `url` in `schema.prisma`.
 - New migrations: `bun run db:migrate` (or `--create-only` then `db:migrate:deploy`).
+
+### Credits / usage
+- `src/lib/usage.ts` wraps `RateLimiterPrisma` over the `Usage` table (`rate-limiter-flexible`). `consumeCredits()` is called first in the `projects.create` and `messages.send` mutations and throws `TOO_MANY_REQUESTS` when the user is out of credits; `restoreCredits()` refunds a consumed credit if the create/dispatch after it fails; `getUsageStatus()` backs the `usage.status` query.
 
 ### tRPC — adding an endpoint
 1. Create `src/modules/<feature>/server/procedures.ts` exporting a router built from `createTRPCRouter` / `baseProcedure` (`@/trpc/init`).

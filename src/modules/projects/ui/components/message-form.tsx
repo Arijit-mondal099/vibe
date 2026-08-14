@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
@@ -7,6 +9,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowUpIcon } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
@@ -28,12 +31,12 @@ interface MessageFormProps {
   projectId: string;
 }
 
-const getDraftKey = (projectId: string) =>
-  `vibe:message-prompt-draft:${projectId}`;
+const getDraftKey = (userId: string, projectId: string) =>
+  `vibe:message-prompt-draft:${userId}:${projectId}`;
 
-const peekMessageDraft = (projectId: string): string => {
+const peekMessageDraft = (userId: string, projectId: string): string => {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem(getDraftKey(projectId)) ?? "";
+  return localStorage.getItem(getDraftKey(userId, projectId)) ?? "";
 };
 
 export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
@@ -43,11 +46,16 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
+  const { userId } = useAuth();
+  // Tracks the authenticated identity across renders so draft cleanup can
+  // react to sign-out / account switches.
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
   const form = useForm<FormType>({
     resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
-      prompt: peekMessageDraft(projectId),
+      prompt: userId ? peekMessageDraft(userId, projectId) : "",
     },
   });
 
@@ -88,10 +96,31 @@ export const MessageForm: React.FC<MessageFormProps> = ({ projectId }) => {
   const showUsage: boolean = !!usage;
 
   // Persist the in-progress draft on every change, so a reload or
-  // closing the app doesn't lose it. Scoped per project.
+  // closing the app doesn't lose it. Scoped per user + project so drafts
+  // never cross authenticated accounts.
   useEffect(() => {
-    localStorage.setItem(getDraftKey(projectId), prompt);
-  }, [prompt, projectId]);
+    if (!userId) return;
+    localStorage.setItem(getDraftKey(userId, projectId), prompt);
+  }, [prompt, projectId, userId]);
+
+  // At the authentication boundary (sign-out or account switch), drop the
+  // previous user's drafts so they can't be resurrected by the next session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const prev = prevUserIdRef.current;
+    if (prev && prev !== userId) {
+      const prefix = `vibe:message-prompt-draft:${prev}:`;
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("vibe:message-prompt-draft:") && key.startsWith(prefix)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+    }
+    prevUserIdRef.current = userId;
+  }, [userId]);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>

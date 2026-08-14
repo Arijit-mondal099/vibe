@@ -29,11 +29,40 @@ type FormType = z.infer<typeof formSchema>;
 
 // Key for the prompt draft handed off to /sign-in so an unauthenticated
 // submit doesn't lose the user's request when this component unmounts.
+// The draft is intentionally ephemeral: it must not persist long enough
+// to leak from one account to another sharing the same browser.
 const PROMPT_DRAFT_KEY = "vibe:project-prompt-draft";
+const PROMPT_DRAFT_TTL_MS = 5 * 60 * 1000;
+
+interface PromptDraft {
+  value: string;
+  expiresAt: number;
+}
 
 const readPromptDraft = (): string => {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem(PROMPT_DRAFT_KEY) ?? "";
+  const raw = localStorage.getItem(PROMPT_DRAFT_KEY);
+  if (!raw) return "";
+  try {
+    const draft: PromptDraft = JSON.parse(raw);
+    if (typeof draft?.value !== "string") return "";
+    if (draft.expiresAt <= Date.now()) {
+      localStorage.removeItem(PROMPT_DRAFT_KEY);
+      return "";
+    }
+    return draft.value;
+  } catch {
+    return "";
+  }
+};
+
+const writePromptDraft = (prompt: string) => {
+  if (typeof window === "undefined") return;
+  const draft: PromptDraft = {
+    value: prompt,
+    expiresAt: Date.now() + PROMPT_DRAFT_TTL_MS,
+  };
+  localStorage.setItem(PROMPT_DRAFT_KEY, JSON.stringify(draft));
 };
 
 export const ProjectForm = () => {
@@ -61,11 +90,11 @@ export const ProjectForm = () => {
       onError: (err, variables) => {
         toast.error(err.message);
         if (err.data?.code === "UNAUTHORIZED") {
-          localStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
+          writePromptDraft(variables.prompt);
           router.push("/sign-in");
         }
         if (err?.data?.code === "TOO_MANY_REQUESTS") {
-          localStorage.setItem(PROMPT_DRAFT_KEY, variables.prompt);
+          writePromptDraft(variables.prompt);
           router.push("/pricing");
         }
       },
