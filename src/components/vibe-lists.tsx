@@ -11,6 +11,7 @@ import { formatRelativeDate } from "@/lib/utils";
 import { DeleteVibe } from "@/components/delete-vibe";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Deterministic gradient per project so each row reads as its own "vibe"
 // instead of repeating the same static icon on every card.
@@ -47,12 +48,10 @@ export const VibeLists = () => {
   return (
     <section className="w-full flex flex-col gap-y-6 sm:gap-y-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          My Vibes
-        </h2>
+        <h2 className="text-2xl font-semibold tracking-tight">My Vibes</h2>
         {!!projects?.length && (
           <span className="text-sm text-muted-foreground tabular-nums">
-            {projects.length} {projects.length === 1 ? "project" : "projects"}
+            {projects.length} {projects.length === 1 ? "vibe" : "vibes"}
           </span>
         )}
       </div>
@@ -62,12 +61,12 @@ export const VibeLists = () => {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="flex items-center gap-4 rounded-lg border p-4 animate-pulse"
+              className="flex items-center gap-4 rounded-lg border p-4"
             >
-              <div className="h-10 w-10 rounded-md bg-muted shrink-0" />
+              <Skeleton className="size-10 rounded-md shrink-0" />
               <div className="flex flex-1 flex-col gap-2">
-                <div className="h-4 w-40 rounded bg-muted" />
-                <div className="h-3 w-24 rounded bg-muted" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-24" />
               </div>
             </div>
           ))}
@@ -131,7 +130,7 @@ export const VibeLists = () => {
               </Link>
 
               <div className="opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-within:opacity-100">
-                <DeleteVibe id={project.id} />
+                <DeleteVibe id={project.id} name={project.name} />
               </div>
             </Card>
           ))}

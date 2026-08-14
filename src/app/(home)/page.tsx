@@ -43,7 +43,7 @@ export default async function Page() {
           <div className="pb-8">
             <Link href="/vibes">
               <Button variant="outline" size="lg" className="group">
-                <span>My Vibes</span>
+                <span>{user.fullName}&apos; Vibes</span>
                 <ChevronRightIcon className="group-hover:animate-sway transition-all" />
               </Button>
             </Link>

@@ -10,7 +10,13 @@ export function cn(...inputs: ClassValue[]) {
  * @param date -  as type of Date or string
  * @returns the formatted date string in the given format.
  */
-import { formatDistanceToNowStrict, format, differenceInHours } from "date-fns";
+import {
+  formatDistanceToNowStrict,
+  format,
+  differenceInHours,
+  intervalToDuration,
+  formatDuration,
+} from "date-fns";
 
 export function formatRelativeDate(date: Date | string) {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -22,6 +28,17 @@ export function formatRelativeDate(date: Date | string) {
   }
 
   return format(d, "MMM d, yyyy, h:mm a");
+}
+
+// Example "3 days 5 hours"
+export function formatTimeUntil(msBeforeNext: number): string {
+  return formatDuration(
+    intervalToDuration({
+      start: new Date(),
+      end: new Date(Date.now() + msBeforeNext),
+    }),
+    { format: ["months", "days", "hours"] },
+  );
 }
 
 /**
@@ -94,4 +111,4 @@ export const convertIntoTree = (files: Files): TreeItem[] => {
 
   const result = convertNode(tree);
   return Array.isArray(result) ? result : [result];
-}
+};
