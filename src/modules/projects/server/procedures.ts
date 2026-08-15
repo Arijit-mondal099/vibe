@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { consumeCredits, restoreCredits } from "@/lib/usage";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
+import { CODE_AGENT_FUNCTION_EVENT } from "@/inngest/functions/code-agent-function";
 
 export const projectRouter = createTRPCRouter({
   getOne: protectedProcedure
@@ -117,7 +118,7 @@ export const projectRouter = createTRPCRouter({
 
         /** Triger code agent background job **/
         await inngest.send({
-          name: "code-agent/run",
+          name: CODE_AGENT_FUNCTION_EVENT,
           data: {
             prompt: input.prompt,
             projectId: newProject.id,

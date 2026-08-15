@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { Sandbox } from "@e2b/code-interpreter";
-import { AgentResult, TextMessage } from "@inngest/agent-kit";
+import { AgentResult, Message, TextMessage } from "@inngest/agent-kit";
 
 export const TEMPLATE = env.VIBE_TEMPLATE;
 export const SANDBOX_TIMEOUT_MS = 600_000 as const;
@@ -40,4 +40,23 @@ export const lastAssistantTextMessageContent = (result: AgentResult) => {
       ? message?.content
       : message.content.map((c) => c.text).join(" ")
     : undefined;
+};
+
+/**
+ * A utility function for parse agent response
+ * @param value Agent response
+ * @returns string
+ */
+export const parseAgentOutput = (value: Message[]): string => {
+  const output = value[0];
+
+  if (output.type !== "text") {
+    return "Fragment";
+  }
+
+  if (Array.isArray(output.content)) {
+    return output.content.map((txt) => txt).join("");
+  } else {
+    return output.content;
+  }
 };
