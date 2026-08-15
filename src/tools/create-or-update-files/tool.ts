@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { getSandbox } from "@/inngest/utils";
 import { validatePath } from "./helpers";
-import { AgentState } from "../../agents/coding-agent";
+import { AgentState } from "../../../../agents/coding-agent";
 
 /**
  * Agent tool: write one or more files into the sandbox project directory.
