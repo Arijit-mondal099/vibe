@@ -1,0 +1,1 @@
+export { readFiles } from "./tool";
