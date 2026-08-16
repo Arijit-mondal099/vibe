@@ -1,16 +1,17 @@
 import { createAgent, openai } from "@inngest/agent-kit";
 
-import { terminalTool } from "../tools/terminal/tool";
-import { createOrUpdateFiles } from "../tools/create-or-update-files/tool";
-import { readFiles } from "../tools/read/tool";
-import { webSearch } from "../tools/web-search/tool";
-import { PROMPT } from "../prompts/build-prompt";
+import { terminalTool } from "@/tools/terminal";
+import { createOrUpdateFiles } from "@/tools/create-or-update-files";
+import { readFiles } from "@/tools/read";
+import { webSearch } from "@/tools/web-search";
+
 import { lastAssistantTextMessageContent } from "@/inngest/utils";
+import { PROMPT } from "./prompt";
 import { Files } from "@/types";
 
 export interface AgentState {
-  summary: string,
-  files: Files
+  summary: string;
+  files: Files;
 }
 
 export const createCodingAgent = (sandboxId: string) => {

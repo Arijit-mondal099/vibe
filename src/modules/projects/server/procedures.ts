@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { consumeCredits, restoreCredits } from "@/lib/usage";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
+import { CODE_AGENT_FUNCTION_EVENT } from "@/inngest/functions/code-agent-function";
 
 export const projectRouter = createTRPCRouter({
   getOne: protectedProcedure
@@ -113,14 +114,23 @@ export const projectRouter = createTRPCRouter({
               },
             },
           },
+          // The nested-created prompt message's id/createdAt are needed for
+          // the code-agent event payload; a brand-new project has exactly
+          // one message. The caller only consumes `data.id`, so widening the
+          // return with the relation is safe.
+          include: {
+            messages: true,
+          },
         });
 
         /** Triger code agent background job **/
         await inngest.send({
-          name: "code-agent/run",
+          name: CODE_AGENT_FUNCTION_EVENT,
           data: {
             prompt: input.prompt,
             projectId: newProject.id,
+            messageId: newProject.messages[0].id,
+            messageCreatedAt: newProject.messages[0].createdAt.toISOString(),
           },
         });
 

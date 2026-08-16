@@ -85,6 +85,7 @@ export const ProjectForm = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
         queryClient.invalidateQueries(trpc.usage.status.queryOptions());
+        localStorage.removeItem(PROMPT_DRAFT_KEY);
         router.push(`/projects/${data.id}`);
       },
       onError: (err, variables) => {
@@ -124,8 +125,14 @@ export const ProjectForm = () => {
     !form.formState.isValid;
 
   useEffect(() => {
-    localStorage.removeItem(PROMPT_DRAFT_KEY);
-  }, []);
+    // Clear a stale draft when the user erases the prompt; otherwise the
+    // old value would be restored from localStorage on remount.
+    if (!prompt.trim()) {
+      localStorage.removeItem(PROMPT_DRAFT_KEY);
+      return;
+    }
+    writePromptDraft(prompt);
+  }, [prompt]);
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

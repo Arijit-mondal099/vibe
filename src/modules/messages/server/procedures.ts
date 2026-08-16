@@ -5,6 +5,7 @@ import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 import { db } from "@/lib/db";
 import { consumeCredits, restoreCredits } from "@/lib/usage";
+import { CODE_AGENT_FUNCTION_EVENT } from "@/inngest/functions/code-agent-function";
 
 export const messageRouter = createTRPCRouter({
   getMany: protectedProcedure
@@ -90,10 +91,12 @@ export const messageRouter = createTRPCRouter({
 
         /** Triger code agent background job **/
         await inngest.send({
-          name: "code-agent/run",
+          name: CODE_AGENT_FUNCTION_EVENT,
           data: {
             prompt: input.prompt,
             projectId: input.projectId,
+            messageId: createdMessage.id,
+            messageCreatedAt: createdMessage.createdAt.toISOString(),
           },
         });
 
