@@ -114,6 +114,13 @@ export const projectRouter = createTRPCRouter({
               },
             },
           },
+          // The nested-created prompt message's id/createdAt are needed for
+          // the code-agent event payload; a brand-new project has exactly
+          // one message. The caller only consumes `data.id`, so widening the
+          // return with the relation is safe.
+          include: {
+            messages: true,
+          },
         });
 
         /** Triger code agent background job **/
@@ -122,6 +129,8 @@ export const projectRouter = createTRPCRouter({
           data: {
             prompt: input.prompt,
             projectId: newProject.id,
+            messageId: newProject.messages[0].id,
+            messageCreatedAt: newProject.messages[0].createdAt,
           },
         });
 

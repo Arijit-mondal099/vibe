@@ -50,12 +50,13 @@ export const lastAssistantTextMessageContent = (result: AgentResult) => {
 export const parseAgentOutput = (value: Message[]): string => {
   const output = value[0];
 
-  if (output.type !== "text") {
+  // Agent may return no output (e.g. blank); don't index into undefined.
+  if (!output || output.type !== "text") {
     return "Fragment";
   }
 
   if (Array.isArray(output.content)) {
-    return output.content.map((txt) => txt).join("");
+    return output.content.map((part) => part.text).join("");
   } else {
     return output.content;
   }

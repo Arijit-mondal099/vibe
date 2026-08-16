@@ -125,8 +125,13 @@ export const ProjectForm = () => {
     !form.formState.isValid;
 
   useEffect(() => {
-    if (!prompt.trim()) return;
-    writePromptDraft(prompt)
+    // Clear a stale draft when the user erases the prompt; otherwise the
+    // old value would be restored from localStorage on remount.
+    if (!prompt.trim()) {
+      localStorage.removeItem(PROMPT_DRAFT_KEY);
+      return;
+    }
+    writePromptDraft(prompt);
   }, [prompt]);
 
   return (

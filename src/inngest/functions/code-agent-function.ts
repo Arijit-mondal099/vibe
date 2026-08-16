@@ -43,17 +43,25 @@ export const codeAgentFunction = inngest.createFunction(
         const messages = await db.message.findMany({
           where: {
             projectId: event.data.projectId,
+            // createdAt is the only chronological signal (Message.id is a
+            // random UUID), so bound history to rows at or before the
+            // current prompt's createdAt. Rows appended by a later
+            // overlapping event for the same project fall outside the
+            // boundary and stay excluded.
+            ...(event.data.messageCreatedAt
+              ? { createdAt: { lte: event.data.messageCreatedAt } }
+              : {}),
           },
-          orderBy: {
-            createdAt: "asc",
-          },
+          orderBy: { createdAt: "asc" },
         });
 
-        // The last message is the current-turn prompt (saved by the tRPC
-        // mutation right before this event fired). It's passed separately
-        // as the input to network.run() below, so exclude it here —
-        // otherwise the model sees it twice: once in history, once as input.
-        const historyMessages = messages.slice(0, -1);
+        // Exclude the current-turn prompt itself — it's passed separately as
+        // network.run's input, so it must not also appear in history. Events
+        // dispatched before messageId/messageCreatedAt existed fall back to
+        // the old last-row heuristic.
+        const historyMessages = event.data.messageId
+          ? messages.filter((message) => message.id !== event.data.messageId)
+          : messages.slice(0, -1);
 
         for (const message of historyMessages) {
           formatedMessages.push({
@@ -96,7 +104,10 @@ export const codeAgentFunction = inngest.createFunction(
     });
 
     /**
-     * Run coding agent via network
+     * Run coding agent via network. Each model invocation is checkpointed
+     * internally by agent-kit (step.ai.infer) when running inside an Inngest
+     * function, so do NOT wrap this in step.run — nesting step.* calls is
+     * unsupported.
      */
     const result = await network.run(event.data.prompt, { state });
 
