@@ -130,7 +130,7 @@ export const projectRouter = createTRPCRouter({
             prompt: input.prompt,
             projectId: newProject.id,
             messageId: newProject.messages[0].id,
-            messageCreatedAt: newProject.messages[0].createdAt,
+            messageCreatedAt: newProject.messages[0].createdAt.toISOString(),
           },
         });
 
