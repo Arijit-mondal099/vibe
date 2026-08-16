@@ -145,16 +145,7 @@ export function VibesListSkeleton() {
   );
 }
 
-export function VibesListError({
-  error,
-  retryAction,
-}: {
-  error: unknown;
-  retryAction: () => void;
-}) {
-  const message =
-    error instanceof Error ? error.message : "Something went wrong.";
-
+export function VibesListError({ retryAction }: { retryAction: () => void }) {
   return (
     <section className="flex flex-col items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 py-14 text-center">
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
@@ -162,7 +153,9 @@ export function VibesListError({
       </div>
       <div className="space-y-1">
         <p className="text-sm font-medium">Couldn&apos;t load your vibes</p>
-        <p className="text-sm text-muted-foreground">{message}</p>
+        <p className="text-sm text-muted-foreground">
+          Something went wrong. Please try again.
+        </p>
       </div>
       <Button
         size="sm"

@@ -53,11 +53,8 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
             {({ reset }) => (
               <ErrorBoundary
                 onReset={reset}
-                fallbackRender={({ error, resetErrorBoundary }) => (
-                  <ProjectHeaderError
-                    error={error}
-                    retryAction={resetErrorBoundary}
-                  />
+                fallbackRender={({ resetErrorBoundary }) => (
+                  <ProjectHeaderError retryAction={resetErrorBoundary} />
                 )}
               >
                 <Suspense fallback={<ProjectHeaderSkeleton />}>
@@ -71,11 +68,8 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
             {({ reset }) => (
               <ErrorBoundary
                 onReset={reset}
-                fallbackRender={({ error, resetErrorBoundary }) => (
-                  <MessagesContainerError
-                    error={error}
-                    retryAction={resetErrorBoundary}
-                  />
+                fallbackRender={({ resetErrorBoundary }) => (
+                  <MessagesContainerError retryAction={resetErrorBoundary} />
                 )}
               >
                 <Suspense fallback={<MessagesContainerSkeleton />}>

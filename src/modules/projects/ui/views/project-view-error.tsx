@@ -11,10 +11,6 @@ interface Props {
 }
 
 export function ProjectViewError({ error, resetErrorBoundary }: Props) {
-  const message =
-    error instanceof Error
-      ? error.message
-      : "Something went wrong loading this project.";
   const digest =
     error instanceof Error && "digest" in error
       ? (error as Error & { digest?: string }).digest
@@ -65,7 +61,7 @@ export function ProjectViewError({ error, resetErrorBoundary }: Props) {
           This project won&apos;t open
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {message}
+          Something went wrong. Please try again.
         </p>
 
         <div className="mt-8 flex w-full items-center gap-2.5">

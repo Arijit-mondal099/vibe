@@ -129,21 +129,18 @@ export function MessagesContainerSkeleton() {
 }
 
 export function MessagesContainerError({
-  error,
   retryAction,
 }: {
-  error: unknown;
   retryAction: () => void;
 }) {
-  const message =
-    error instanceof Error ? error.message : "Something went wrong.";
-
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
       <AlertTriangle className="size-6 text-destructive" />
       <div className="space-y-1">
         <p className="text-sm font-medium">Couldn&apos;t load messages</p>
-        <p className="text-sm text-muted-foreground">{message}</p>
+        <p className="text-sm text-muted-foreground">
+          Something went wrong. Please try again.
+        </p>
       </div>
       <Button size="sm" variant="outline" onClick={retryAction}>
         <RefreshCcwIcon />

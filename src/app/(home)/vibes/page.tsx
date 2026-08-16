@@ -18,11 +18,8 @@ export function Vibes() {
           {({ reset }) => (
             <ErrorBoundary
               onReset={reset}
-              fallbackRender={({ error, resetErrorBoundary }) => (
-                <VibesListError
-                  error={error}
-                  retryAction={resetErrorBoundary}
-                />
+              fallbackRender={({ resetErrorBoundary }) => (
+                <VibesListError retryAction={resetErrorBoundary} />
               )}
             >
               <Suspense fallback={<VibesListSkeleton />}>

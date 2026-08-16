@@ -125,20 +125,17 @@ export function ProjectHeaderSkeleton() {
 }
 
 export function ProjectHeaderError({
-  error,
   retryAction,
 }: {
-  error: unknown;
   retryAction: () => void;
 }) {
-  const message =
-    error instanceof Error ? error.message : "Something went wrong.";
-
   return (
     <header className="px-3 py-2.5 border-b flex items-center justify-between gap-2 bg-destructive/5">
       <div className="flex items-center gap-2 min-w-0">
         <AlertTriangle className="size-4 shrink-0 text-destructive" />
-        <span className="text-sm text-destructive truncate">{message}</span>
+        <span className="text-sm text-destructive truncate">
+          Something went wrong.
+        </span>
       </div>
       <Button
         size="sm"
