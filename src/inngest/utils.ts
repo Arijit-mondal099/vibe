@@ -3,7 +3,7 @@ import { Sandbox } from "@e2b/code-interpreter";
 import { AgentResult, Message, TextMessage } from "@inngest/agent-kit";
 
 export const TEMPLATE = env.VIBE_TEMPLATE;
-export const SANDBOX_TIMEOUT_MS = 600_000 as const;
+export const SANDBOX_TIMEOUT_MS = 3_600_000 as const; // 1 hours
 export const MAX_ITER = 15 as const;
 
 /**

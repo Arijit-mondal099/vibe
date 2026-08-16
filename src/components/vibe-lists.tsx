@@ -5,7 +5,7 @@ import { useUser } from "@clerk/nextjs";
 import { Sparkles, Plus, AlertTriangle } from "lucide-react";
 
 import { useTRPC } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { formatRelativeDate } from "@/lib/utils";
 import { DeleteVibe } from "@/components/delete-vibe";
@@ -31,56 +31,36 @@ function gradientFor(seed: string) {
   return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
 }
 
+// Auth gate: keeps the suspense query from ever firing (or suspending)
+// for a logged-out / not-yet-loaded user.
 export const VibeLists = () => {
-  const trpc = useTRPC();
   const { user } = useUser();
-  const {
-    data: projects,
-    isLoading,
-    isError,
-    error,
-  } = useQuery(trpc.projects.getMany.queryOptions());
 
   if (!user) {
     return null;
   }
 
+  return <VibeListsContent />;
+};
+
+const VibeListsContent = () => {
+  const trpc = useTRPC();
+  const { data: projects } = useSuspenseQuery(
+    trpc.projects.getMany.queryOptions(),
+  );
+
   return (
     <section className="w-full flex flex-col gap-y-6 sm:gap-y-4">
       <div className="flex items-baseline justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">My Vibes</h2>
-        {!!projects?.length && (
+        {projects.length > 0 && (
           <span className="text-sm text-muted-foreground tabular-nums">
             {projects.length} {projects.length === 1 ? "vibe" : "vibes"}
           </span>
         )}
       </div>
 
-      {isLoading && (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 rounded-lg border p-4"
-            >
-              <Skeleton className="size-10 rounded-md shrink-0" />
-              <div className="flex flex-1 flex-col gap-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {isError && (
-        <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p>{error.message}</p>
-        </div>
-      )}
-
-      {!isLoading && !isError && projects?.length === 0 && (
+      {projects.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-14 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
             <Sparkles className="h-5 w-5 text-muted-foreground" />
@@ -98,9 +78,7 @@ export const VibeLists = () => {
             </Link>
           </Button>
         </div>
-      )}
-
-      {!isLoading && !isError && !!projects?.length && (
+      ) : (
         <div className="flex flex-col gap-2">
           {projects.map((project) => (
             <Card
@@ -139,3 +117,54 @@ export const VibeLists = () => {
     </section>
   );
 };
+
+// Skeleton mirrors VibeListsContent's shape (header + rows) so there's no
+// layout jump between the fallback and the loaded content.
+export function VibesListSkeleton() {
+  return (
+    <section className="w-full flex flex-col gap-y-6 sm:gap-y-4">
+      <div className="flex items-baseline justify-between">
+        <Skeleton className="h-8 w-28" />
+        <Skeleton className="h-4 w-12" />
+      </div>
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 rounded-lg border p-4"
+          >
+            <Skeleton className="size-10 rounded-md shrink-0" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function VibesListError({ retryAction }: { retryAction: () => void }) {
+  return (
+    <section className="flex flex-col items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 py-14 text-center">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+        <AlertTriangle className="h-5 w-5 text-destructive" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Couldn&apos;t load your vibes</p>
+        <p className="text-sm text-muted-foreground">
+          Something went wrong. Please try again.
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        className="mt-1"
+        onClick={retryAction}
+      >
+        Try again
+      </Button>
+    </section>
+  );
+}

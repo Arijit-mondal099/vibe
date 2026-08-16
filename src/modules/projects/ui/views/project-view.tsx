@@ -4,6 +4,8 @@ import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { Code2Icon, CrownIcon, EyeIcon } from "lucide-react";
+import { ErrorBoundary } from "react-error-boundary";
+import { QueryErrorResetBoundary } from "@tanstack/react-query";
 
 import { Fragment } from "@/generated/prisma/client";
 import { Files } from "@/types";
@@ -15,8 +17,16 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { MessagesContainer } from "../components/messages-container";
-import { ProjectHeader } from "../components/project-header";
+import {
+  MessagesContainer,
+  MessagesContainerSkeleton,
+  MessagesContainerError,
+} from "../components/messages-container";
+import {
+  ProjectHeader,
+  ProjectHeaderSkeleton,
+  ProjectHeaderError,
+} from "../components/project-header";
 import { FragmentWeb } from "../components/fragment-web";
 import { FileExplorer } from "@/components/file-explorer";
 import { UserControl } from "@/components/user-control";
@@ -39,17 +49,39 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
           minSize="15%"
           className="flex flex-col min-h-0"
         >
-          <Suspense fallback={<p>Loading project...</p>}>
-            <ProjectHeader projectId={projectId} />
-          </Suspense>
+          <QueryErrorResetBoundary>
+            {({ reset }) => (
+              <ErrorBoundary
+                onReset={reset}
+                fallbackRender={({ resetErrorBoundary }) => (
+                  <ProjectHeaderError retryAction={resetErrorBoundary} />
+                )}
+              >
+                <Suspense fallback={<ProjectHeaderSkeleton />}>
+                  <ProjectHeader projectId={projectId} />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+          </QueryErrorResetBoundary>
 
-          <Suspense fallback={<p>loading...</p>}>
-            <MessagesContainer
-              projectId={projectId}
-              activeFragment={activeFragment}
-              setActiveFragment={setActiveFragment}
-            />
-          </Suspense>
+          <QueryErrorResetBoundary>
+            {({ reset }) => (
+              <ErrorBoundary
+                onReset={reset}
+                fallbackRender={({ resetErrorBoundary }) => (
+                  <MessagesContainerError retryAction={resetErrorBoundary} />
+                )}
+              >
+                <Suspense fallback={<MessagesContainerSkeleton />}>
+                  <MessagesContainer
+                    projectId={projectId}
+                    activeFragment={activeFragment}
+                    setActiveFragment={setActiveFragment}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+          </QueryErrorResetBoundary>
         </ResizablePanel>
 
         <ResizableHandle withHandle />
