@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { AlertTriangle, RefreshCcwIcon } from "lucide-react";
 
 import { useTRPC } from "@/trpc/client";
 import { Fragment } from "@/generated/prisma/client";
@@ -11,6 +12,8 @@ import { MessageForm } from "./message-form";
 import { MessageLoading } from "./message-loading";
 import Image from "next/image";
 import { Hint } from "@/components/hint";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   projectId: string;
@@ -30,10 +33,7 @@ export const MessagesContainer: React.FC<Props> = ({
   const { data: messages } = useSuspenseQuery(
     trpc.messages.getMany.queryOptions(
       { projectId },
-      {
-        // TODO: tem live message update
-        refetchInterval: 5000,
-      },
+      { refetchInterval: 5000 },
     ),
   );
 
@@ -100,3 +100,55 @@ export const MessagesContainer: React.FC<Props> = ({
     </div>
   );
 };
+
+export function MessagesContainerSkeleton() {
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-48">
+        <div className="flex flex-col gap-6 px-4 pt-6">
+          <div className="flex flex-col items-end gap-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Skeleton className="size-8 rounded-full" />
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Skeleton className="h-5 w-28" />
+          </div>
+        </div>
+      </div>
+      <div className="relative p-3 pt-1">
+        <div className="absolute -top-6 left-0 right-0 h-6 bg-linear-to-b from-transparent to-background pointer-events-none" />
+        <Skeleton className="h-26 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+export function MessagesContainerError({
+  error,
+  retryAction,
+}: {
+  error: unknown;
+  retryAction: () => void;
+}) {
+  const message =
+    error instanceof Error ? error.message : "Something went wrong.";
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <AlertTriangle className="size-6 text-destructive" />
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Couldn&apos;t load messages</p>
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+      <Button size="sm" variant="outline" onClick={retryAction}>
+        <RefreshCcwIcon />
+        Try again
+      </Button>
+    </div>
+  );
+}
