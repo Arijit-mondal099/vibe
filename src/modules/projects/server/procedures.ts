@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { generateSlug } from "random-word-slugs";
 
 import { db } from "@/lib/db";
 import { consumeCredits, restoreCredits } from "@/lib/usage";
 import { protectedProcedure, createTRPCRouter } from "@/trpc/init";
 import { inngest } from "@/inngest/client";
 import { CODE_AGENT_FUNCTION_EVENT } from "@/inngest/functions/code-agent-function";
+import { GEN_PROJ_FUN_EVENT } from "@/inngest/functions/gen-proj-name-fun";
 
 export const projectRouter = createTRPCRouter({
   getOne: protectedProcedure
@@ -33,16 +33,39 @@ export const projectRouter = createTRPCRouter({
       return project;
     }),
 
-  getMany: protectedProcedure.query(async ({ ctx }) => {
-    const projects = await db.project.findMany({
-      where: {
-        userId: ctx.auth.userId,
-      },
-      orderBy: { createdAt: "asc" },
-    });
+  getMany: protectedProcedure
+    .input(
+      z.object({
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(10),
+        order: z.enum(["asc", "desc"]),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { page, limit, order } = input;
 
-    return projects;
-  }),
+      const [projects, totalCount] = await Promise.all([
+        db.project.findMany({
+          where: {
+            userId: ctx.auth.userId,
+          },
+          orderBy: { createdAt: order },
+          take: limit,
+          skip: (page - 1) * limit,
+        }),
+        db.project.count({
+          where: {
+            userId: ctx.auth.userId,
+          },
+        }),
+      ]);
+
+      return {
+        items: projects,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      };
+    }),
 
   delete: protectedProcedure
     .input(
@@ -103,7 +126,7 @@ export const projectRouter = createTRPCRouter({
         /** create project with message **/
         const newProject = await db.project.create({
           data: {
-            name: generateSlug(2, { format: "kebab" }),
+            name: "Unknown Project",
             userId: ctx.auth.userId,
 
             messages: {
@@ -120,6 +143,15 @@ export const projectRouter = createTRPCRouter({
           // return with the relation is safe.
           include: {
             messages: true,
+          },
+        });
+
+        /** Triger project name generator job **/
+        await inngest.send({
+          name: GEN_PROJ_FUN_EVENT,
+          data: {
+            prompt: input.prompt,
+            projectId: newProject.id,
           },
         });
 

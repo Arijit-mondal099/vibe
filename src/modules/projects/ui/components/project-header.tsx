@@ -41,7 +41,13 @@ export const ProjectHeader: React.FC<Props> = ({ projectId }) => {
   const trpc = useTRPC();
   const { setTheme, theme } = useTheme();
   const { data: project } = useSuspenseQuery(
-    trpc.projects.getOne.queryOptions({ id: projectId }),
+    trpc.projects.getOne.queryOptions(
+      { id: projectId },
+      {
+        refetchInterval: (query) =>
+          query.state?.data?.name === "Unknown Project" ? 2000 : false,
+      },
+    ),
   );
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -34,7 +34,9 @@ export const DeleteVibe: FC<Props> = ({ id, name }) => {
   const deleteProject = useMutation(
     trpc.projects.delete.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
+        queryClient.invalidateQueries({
+          queryKey: trpc.projects.getMany.queryKey(),
+        });
         setOpen(false);
       },
       onError: (err) => {
@@ -91,7 +93,11 @@ export const DeleteVibe: FC<Props> = ({ id, name }) => {
             disabled={!isMatch || deleteProject.isPending}
             onClick={() => deleteProject.mutate({ id })}
           >
-            Delete
+            {deleteProject.isPending ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              "Delete"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
