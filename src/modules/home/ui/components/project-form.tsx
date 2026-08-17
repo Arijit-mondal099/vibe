@@ -83,8 +83,12 @@ export const ProjectForm = () => {
   const createProject = useMutation(
     trpc.projects.create.mutationOptions({
       onSuccess: (data) => {
-        queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
-        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
+        queryClient.invalidateQueries({
+          queryKey: trpc.projects.getMany.queryKey(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.usage.status.queryKey(),
+        });
         localStorage.removeItem(PROMPT_DRAFT_KEY);
         router.push(`/projects/${data.id}`);
       },

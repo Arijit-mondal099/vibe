@@ -33,7 +33,13 @@ export const MessagesContainer: React.FC<Props> = ({
   const { data: messages } = useSuspenseQuery(
     trpc.messages.getMany.queryOptions(
       { projectId },
-      { refetchInterval: 5000 },
+      {
+        refetchInterval: (query) => {
+          const data = query.state.data;
+          const lastMessage = data?.[data.length - 1];
+          return lastMessage?.role === "USER" ? 2000 : false;
+        },
+      },
     ),
   );
 

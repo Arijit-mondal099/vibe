@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { ClerkProvider } from "@clerk/nextjs";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import "./globals.css";
 
@@ -36,8 +37,8 @@ export default function RootLayout({
     <ClerkProvider
       appearance={{
         variables: {
-          colorPrimary: "#C96342"
-        }
+          colorPrimary: "#C96342",
+        },
       }}
     >
       <TRPCReactProvider>
@@ -60,7 +61,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              {children}
+              <NuqsAdapter>{children}</NuqsAdapter>
               <Toaster position="top-center" />
             </ThemeProvider>
           </body>
