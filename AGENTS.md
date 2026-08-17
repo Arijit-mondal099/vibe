@@ -77,15 +77,21 @@ src/
   proxy.ts                 # Clerk auth middleware — protects all non-public routes (Next 16 name)
   components/ui/           # shadcn/ui components (do not hand-edit; re-run shadcn add)
   generated/prisma/        # Prisma client (gitignored — run bun run db:generate)
+  agents/
+    code-agent/            # coding-agent.ts (createAgent + AgentState { summary, files }), prompt.ts
+    fragment-title-generator/  # names generated apps (gpt-4o-mini)
+    response-generator/    # writes the assistant's chat reply (gpt-4o-mini)
+  tools/                   # agent tools: one folder per tool (terminal, read, create-or-update-files, web-search)
+    <tool>/tool.ts         # factory `(sandboxId) => createTool({...})`; stateless ones like webSearch() take no arg
+    <tool>/helpers.ts      # blocking rules, timeouts, truncation
+    <tool>/index.ts        # re-exports the tool factory
   inngest/
     client.ts              # Inngest instance (id: "vibe")
-    utils.ts               # TEMPLATE, getSandboxId/getSandbox, lastAssistantTextMessageContent
+    utils.ts               # TEMPLATE, getSandboxId/getSandbox, parseAgentOutput, MAX_ITER
     functions/
       index.ts             # exports all functions for the serve() route
       code-agent-function.ts  # main background job: sandbox → agent network → save to db
-      agents/coding-agent.ts  # createAgent with tools + AgentState { summary, files }
-      prompts/build-prompt.ts # agent system prompt
-      tools/<tool>/tool.ts    # one tool per folder, paired with helpers.ts
+      gen-proj-name-fun.ts    # names the project (gpt-4o-mini)
   lib/
     env.ts                 # Zod env validation (see above)
     db.ts                  # Prisma client singleton (cached on global in dev)
@@ -124,9 +130,9 @@ sandbox/nextjs/            # E2B sandbox template source
 3. Client side: `const trpc = useTRPC()` then `trpc.<router>.<proc>.queryOptions()` / `.mutationOptions()` (TanStack Query pattern — see `src/app/page.tsx`).
 
 ### Inngest + Agent Kit — adding a tool
-1. Create `src/inngest/functions/tools/<name>/tool.ts` (+ `helpers.ts` for blocking rules, timeouts, truncation).
+1. Create `src/tools/<name>/tool.ts` (+ `helpers.ts` for blocking rules, timeouts, truncation, and `index.ts` re-export).
 2. Tools are **factory functions** taking `sandboxId` (except stateless ones like `webSearch()`): `export const terminalTool = (sandboxId: string) => createTool({...})`.
-3. Register in `agents/coding-agent.ts` and describe it in `prompts/build-prompt.ts` (the agent depends on accurate tool descriptions).
+3. Register in `src/agents/code-agent/coding-agent.ts` and describe it in `src/agents/code-agent/prompt.ts` (the agent depends on accurate tool descriptions).
 4. New background jobs: create in `src/inngest/functions/`, export from `functions/index.ts`, and send events via `inngest.send({ name: "...", data })`.
 5. Test locally: `bun run inngest` + `bun run dev`, trigger the event in the Inngest dev UI.
 
@@ -136,7 +142,7 @@ sandbox/nextjs/            # E2B sandbox template source
 
 ## Code style
 
-- **Comment the "why", not the "what"** — explain intent, non-obvious decisions, and gotchas; don't restate the code. Match the existing style: `/** ... */` doc blocks on exported functions/tools (see `src/inngest/functions/tools/*/tool.ts`), `//` inline notes for tricky logic (see `src/lib/db.ts`, `src/trpc/client.tsx`).
+- **Comment the "why", not the "what"** — explain intent, non-obvious decisions, and gotchas; don't restate the code. Match the existing style: `/** ... */` doc blocks on exported functions/tools (see `src/tools/*/tool.ts`), `//` inline notes for tricky logic (see `src/lib/db.ts`, `src/trpc/client.tsx`).
 - **Write clean code** — small, focused functions with descriptive names; no dead code, TODOs, or placeholder stubs; follow existing conventions (named exports, PascalCase components, kebab-case filenames, `@/` imports); strict TypeScript — no `any` where a real type exists.
 - **Keep comments truthful** — update or delete comments when the code they explain changes; a stale comment is worse than none.
 
@@ -162,7 +168,7 @@ When asked to open a PR for the current changes, follow this exact order — do 
 
 - **Do not import `@/lib/env` or `@/lib/db` from client components** — `env.ts` calls `process.exit(1)` and `db.ts` is server-only; bundle errors are confusing.
 - **`src/generated/prisma` is gitignored** — a fresh checkout must run `bun run db:generate` before `typecheck`/`build`.
-- Use the `@/` alias for app imports; within `src/inngest/functions/tools/*`, tools import `getSandbox` from `@/inngest/utils` and `AgentState` from `../../agents/coding-agent`.
+- Use the `@/` alias for app imports; within `src/tools/*`, tools import `getSandbox` from `@/inngest/utils` and `AgentState` from `@/agents/code-agent`.
 - Zod is v4 — error options use `{ error: "..." }`, not v3's `{ message }`.
 - Do not add `.env`-only secrets to committed code; server-side secrets must not be `NEXT_PUBLIC_`-prefixed (they get inlined into the client bundle).
 - Check `node_modules/next/dist/docs/` before using any Next.js API — Next 16 has breaking changes vs. older versions.
