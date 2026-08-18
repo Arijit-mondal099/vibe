@@ -31,9 +31,15 @@ export async function consumeCredits() {
   }
 
   const usageTracker = await getUsageTracker();
-  const result = await usageTracker.consume(userId, GENERATION_COST);
-
-  return result;
+  try {
+    const result = await usageTracker.consume(userId, GENERATION_COST);
+    return result;
+  } catch (error) {
+    // Log the full error so the root cause is visible in Vercel logs
+    // (the caller only surfaces a generic "Something went wrong..." message)
+    console.error("consumeCredits failed:", error);
+    throw error;
+  }
 }
 
 // Inverse of consumeCredits: gives the credit back when post-charge work

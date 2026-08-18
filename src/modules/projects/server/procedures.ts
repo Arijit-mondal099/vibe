@@ -109,7 +109,10 @@ export const projectRouter = createTRPCRouter({
       try {
         await consumeCredits();
       } catch (error: unknown) {
+        // RateLimiterRes (rate limit exceeded) is not an Error instance.
+        // Any other error (DB failure, auth, etc.) is an Error subclass.
         if (error instanceof Error) {
+          console.error("projects.create: consumeCredits failed:", error);
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Something went wrong...",
@@ -171,7 +174,9 @@ export const projectRouter = createTRPCRouter({
         // Post-charge work failed before the job was accepted: give the
         // consumed credit back so it isn't lost, then surface the original
         // error. A restore failure must not mask the real cause.
-        await restoreCredits().catch(() => undefined);
+        await restoreCredits().catch((err) => {
+          console.error("projects.create: restoreCredits failed:", err);
+        });
         throw error;
       }
     }),
