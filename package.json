@@ -20,6 +20,7 @@
     "db:validate": "bunx prisma validate",
     "db:format": "bunx prisma format",
     "db:status": "bunx prisma migrate status",
+    "postinstall": "prisma generate",
     "inngest": "npx inngest-cli@latest dev",
     "template:build:dev": "cd sandbox/nextjs && bun build.dev.ts",
     "template:build:prod": "cd sandbox/nextjs && bun build.prod.ts",
