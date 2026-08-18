@@ -1,6 +1,10 @@
-"use client";
-
+import type { Metadata } from "next";
 import { VibeLists } from "@/components/vibe-lists";
+
+export const metadata: Metadata = {
+  title: "My Vibes",
+  description: "Browse and manage your AI-generated projects on Vibe.",
+};
 
 export function Vibes() {
   return (

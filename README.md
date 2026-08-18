@@ -12,7 +12,7 @@ Describe what you want to build and Vibe ships a working app in minutes — with
 
 </div>
 
----
+<img src="public/demo.png" alt="Vibe demo" width="100%" />
 
 ## What is Vibe?
 
