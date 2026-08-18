@@ -122,7 +122,8 @@ sandbox/nextjs/            # E2B sandbox template source
 - New migrations: `bun run db:migrate` (or `--create-only` then `db:migrate:deploy`).
 
 ### Credits / usage
-- `src/lib/usage.ts` wraps `RateLimiterPrisma` over the `Usage` table (`rate-limiter-flexible`). `consumeCredits()` is called first in the `projects.create` and `messages.send` mutations and throws `TOO_MANY_REQUESTS` when the user is out of credits; `restoreCredits()` refunds a consumed credit if the create/dispatch after it fails; `getUsageStatus()` backs the `usage.status` query.
+- `src/lib/usage.ts` wraps `RateLimiterPrisma` over the `Usage` table (`rate-limiter-flexible`). `consumeCredits()` is called first in the `projects.create` and `messages.create` mutations and throws `TOO_MANY_REQUESTS` when the user is out of credits; `restoreCredits()` refunds a consumed credit if the create/dispatch after it fails; `getUsageStatus()` backs the `usage.status` query.
+- The catch block in those mutations uses `error instanceof Error` to distinguish database errors (returns generic "Something went wrong...") from rate-limit rejections (non-`Error` `RateLimiterRes`, returns "You have run out of credits"). Always `console.error` the original error — the user-facing message is intentionally generic.
 
 ### tRPC — adding an endpoint
 1. Create `src/modules/<feature>/server/procedures.ts` exporting a router built from `createTRPCRouter` / `baseProcedure` (`@/trpc/init`).
@@ -168,6 +169,8 @@ When asked to open a PR for the current changes, follow this exact order — do 
 
 - **Do not import `@/lib/env` or `@/lib/db` from client components** — `env.ts` calls `process.exit(1)` and `db.ts` is server-only; bundle errors are confusing.
 - **`src/generated/prisma` is gitignored** — a fresh checkout must run `bun run db:generate` before `typecheck`/`build`.
+- **SSL mode in `DATABASE_URL`**: use `sslmode=verify-full` (not `require`). With `pg-connection-string@2.14.0`, `require`/`prefer`/`verify-ca` are treated as `verify-full` and emit a deprecation warning. Update both local `.env` and Vercel environment variables.
+- **Inngest production keys**: `new Inngest({ id: "vibe" })` reads `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` from env at runtime — they are NOT in the Zod schema in `src/lib/env.ts` but must be set in Vercel for `inngest.send()` calls to work in production.
 - Use the `@/` alias for app imports; within `src/tools/*`, tools import `getSandbox` from `@/inngest/utils` and `AgentState` from `@/agents/code-agent`.
 - Zod is v4 — error options use `{ error: "..." }`, not v3's `{ message }`.
 - Do not add `.env`-only secrets to committed code; server-side secrets must not be `NEXT_PUBLIC_`-prefixed (they get inlined into the client bundle).
