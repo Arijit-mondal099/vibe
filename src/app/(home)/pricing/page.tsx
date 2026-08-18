@@ -1,7 +1,12 @@
-"use client";
-
+import type { Metadata } from "next";
 import { PricingTable } from "@clerk/nextjs";
 import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Simple, transparent pricing for Vibe. Pick the plan that fits how you build.",
+};
 
 function Page() {
   return (

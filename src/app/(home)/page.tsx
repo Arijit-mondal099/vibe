@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { currentUser } from "@clerk/nextjs/server";
 
 import { ProjectForm } from "@/modules/home/ui/components/project-form";
@@ -11,6 +12,12 @@ import { Features } from "@/modules/home/ui/components/features";
 import { Faq } from "@/modules/home/ui/components/faq";
 import { Footer } from "@/modules/home/ui/components/footer";
 import { Pricing } from "@/modules/home/ui/components/pricing";
+
+export const metadata: Metadata = {
+  title: "Create apps and websites by chatting with AI",
+  description:
+    "Describe your idea and Vibe generates a custom, live Next.js app in the browser — instantly shareable with a link.",
+};
 
 export default async function Page() {
   const user = await currentUser();

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { VideoPlayer } from "@/components/video-player";
 import { SignIn } from "@clerk/nextjs";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to Vibe to build and manage your AI-generated apps.",
+};
 
 export default function Page() {
   return (
