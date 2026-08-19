@@ -173,6 +173,22 @@ export const codeAgentFunction = inngest.createFunction(
       });
     });
 
+    /**
+     * Store all project to s3
+     */
+    if (!isError) {
+      // Pass the Inngest event ID as an immutable revision identifier so each
+      // successful run is stored under its own prefix in S3.
+      await step.sendEvent("store-files", {
+        name: "run/upload-to-s3",
+        data: {
+          projectId: event.data.projectId,
+          sandboxId,
+          revisionId: event.id,
+        },
+      });
+    }
+
     return {
       url: sandboxUrl,
       title: "fragment",

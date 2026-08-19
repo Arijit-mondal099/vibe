@@ -51,6 +51,17 @@ VIBE_TEMPLATE=tests-default-team-30d4/vibe-nextjs-dev
 
 # Tavily API key (web search tool)
 TAVILY_API_KEY=
+
+# Backblaze B2 bucket (used to store generated project archives for export)
+B2_KEY_ID=
+B2_APPLICATION_KEY=
+B2_BUCKET_NAME=
+B2_REGION=us-east-005
+B2_ENDPOINT=https://s3.us-east-005.backblazeb2.com
+
+# Inngest production keys (only required in production; leave commented for local dev)
+# INNGEST_EVENT_KEY=
+# INNGEST_SIGNING_KEY=
 ```
 
 Required variables are validated at import time by `src/lib/env.ts` — a missing value will exit the process with an error.
