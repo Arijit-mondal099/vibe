@@ -68,8 +68,8 @@ const FileBreadcrumb: React.FC<FileBreadcrumbProps> = ({ filePath }) => {
         <>
           <BreadcrumbItem>
             <span className="text-muted-foreground">{firstSegment}</span>
-            <BreadcrumbSeparator />
           </BreadcrumbItem>
+          <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbEllipsis />
           </BreadcrumbItem>
