@@ -42,6 +42,11 @@ jobs:
       E2B_API_KEY: build-placeholder
       VIBE_TEMPLATE: tests-default-team-30d4/vibe-nextjs-dev
       TAVILY_API_KEY: build-placeholder
+      B2_KEY_ID: build-placeholder
+      B2_APPLICATION_KEY: build-placeholder
+      B2_BUCKET_NAME: build-placeholder
+      B2_REGION: us-east-005
+      B2_ENDPOINT: https://s3.us-east-005.backblazeb2.com
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
