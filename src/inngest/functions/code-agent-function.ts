@@ -176,13 +176,15 @@ export const codeAgentFunction = inngest.createFunction(
     /**
      * Store all project to s3
      */
-    await step.sendEvent("store-files", {
-      name: "run/upload-to-s3",
-      data: {
-        projectId: event.data.projectId,
-        sandboxId,
-      },
-    });
+    if (!isError) {
+      await step.sendEvent("store-files", {
+        name: "run/upload-to-s3",
+        data: {
+          projectId: event.data.projectId,
+          sandboxId,
+        },
+      });
+    }
 
     return {
       url: sandboxUrl,
