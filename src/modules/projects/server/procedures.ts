@@ -59,9 +59,13 @@ const resolveLatestRevision = async (
     if (!result.Body) return null;
     const bytes = await streamToBytes(result.Body);
     return new TextDecoder().decode(bytes).trim() || null;
-  } catch {
-    // Object not found (NoSuchKey) or any other S3 error: no completed revision.
-    return null;
+  } catch (err) {
+    // A missing marker means no completed revision exists yet. Any other
+    // failure is an infrastructure problem and must not be silently
+    // downgraded to the stale DB-fragment fallback.
+    const name = (err as { name?: string })?.name;
+    if (name === "NoSuchKey" || name === "NotFound") return null;
+    throw err;
   }
 };
 
@@ -125,9 +129,7 @@ const DOWNLOAD_CONCURRENCY = 8;
  * `[bytes, { level: 6 }]` tuples, which fflate automatically compresses
  * asynchronously, so the event loop is not blocked during compression.
  */
-const zipAsync = (
-  input: Record<string, Uint8Array>,
-): Promise<Uint8Array> =>
+const zipAsync = (input: Record<string, Uint8Array>): Promise<Uint8Array> =>
   new Promise((resolve, reject) => {
     // Wrap each entry as [bytes, options] so fflate uses AsyncZipDeflate
     // internally for off-thread deflation.
@@ -148,11 +150,13 @@ const zipAsync = (
 const downloadWithConcurrency = async (
   items: { key: string; rel: string }[],
   limit: number,
+  maxBytes: number,
 ): Promise<{ rel: string; bytes: Uint8Array }[]> => {
   const results: ({ rel: string; bytes: Uint8Array } | null)[] = new Array(
     items.length,
   ).fill(null);
   let index = 0;
+  let totalBytes = 0;
 
   const workers = Array.from(
     { length: Math.min(limit, items.length) },
@@ -164,13 +168,22 @@ const downloadWithConcurrency = async (
           new GetObjectCommand({ Bucket: B2_BUCKET, Key: key }),
         );
         if (!object.Body) continue;
-        results[current] = { rel, bytes: await streamToBytes(object.Body) };
+        const bytes = await streamToBytes(object.Body);
+        totalBytes += bytes.byteLength;
+        if (totalBytes > maxBytes) {
+          throw new Error(
+            `Revision uncompressed size exceeds the export limit of ${maxBytes} bytes.`,
+          );
+        }
+        results[current] = { rel, bytes };
       }
     },
   );
 
   await Promise.all(workers);
-  return results.filter((r): r is { rel: string; bytes: Uint8Array } => r !== null);
+  return results.filter(
+    (r): r is { rel: string; bytes: Uint8Array } => r !== null,
+  );
 };
 
 export const projectRouter = createTRPCRouter({
@@ -220,8 +233,6 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      const zipKey = `projects/${project.id}/project.zip`;
-
       // B2 is the source of truth. Resolve the latest completed revision via
       // the `latest` marker written atomically after every successful upload,
       // then rebuild the archive from only that revision's files so removed or
@@ -232,6 +243,7 @@ export const projectRouter = createTRPCRouter({
         const revisionId = await resolveLatestRevision(project.id);
 
         if (revisionId) {
+          const zipKey = `projects/${project.id}/revisions/${revisionId}/project.zip`;
           const b2files = await listB2ProjectFiles(project.id, revisionId);
 
           if (b2files.length > 0) {
@@ -244,23 +256,14 @@ export const projectRouter = createTRPCRouter({
             }
 
             // Download all revision files concurrently (bounded to
-            // DOWNLOAD_CONCURRENCY in-flight requests at a time).
+            // DOWNLOAD_CONCURRENCY in-flight requests at a time). The total
+            // uncompressed size cap is enforced during download itself, so
+            // memory usage is bounded before all bytes are resident.
             const downloaded = await downloadWithConcurrency(
               b2files,
               DOWNLOAD_CONCURRENCY,
+              MAX_EXPORT_BYTES,
             );
-
-            // Enforce a total uncompressed size cap after downloading so
-            // memory usage is bounded before zip creation begins.
-            const totalBytes = downloaded.reduce(
-              (sum, { bytes }) => sum + bytes.byteLength,
-              0,
-            );
-            if (totalBytes > MAX_EXPORT_BYTES) {
-              throw new Error(
-                `Revision uncompressed size ${totalBytes} bytes exceeds the export limit of ${MAX_EXPORT_BYTES} bytes.`,
-              );
-            }
 
             // Build the zip asynchronously so deflation is offloaded to a
             // worker thread and the event loop remains unblocked.
