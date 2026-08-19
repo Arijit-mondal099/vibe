@@ -103,7 +103,7 @@ export const uploadProjectToS3 = inngest.createFunction(
     },
   },
   async ({ event, step }) => {
-    const { projectId, sandboxId } = event.data;
+    const { projectId, sandboxId, revisionId } = event.data;
 
     const uploadedFiles = await step.run("upload-project-files", async () => {
       const sandbox = await getSandbox(sandboxId);
@@ -122,6 +122,12 @@ export const uploadProjectToS3 = inngest.createFunction(
             !IGNORED_FILES.has(relativePath.split("/").at(-1)!),
         );
 
+      // Each successful run is uploaded beneath an immutable revision prefix
+      // so that renamed or deleted files from a prior run can never appear in
+      // a later export. The prefix layout is:
+      //   projects/<projectId>/revisions/<revisionId>/<relativePath>
+      const revisionPrefix = `projects/${projectId}/revisions/${revisionId}`;
+
       // Read each file once as raw bytes (binary-safe for assets under
       // public/) and upload every object concurrently. A consolidated
       // project.zip is built on-demand by `projects.getExport` when needed.
@@ -134,11 +140,22 @@ export const uploadProjectToS3 = inngest.createFunction(
           await s3.send(
             new PutObjectCommand({
               Bucket: env.B2_BUCKET_NAME,
-              Key: `projects/${projectId}/${relativePath}`,
+              Key: `${revisionPrefix}/${relativePath}`,
               Body: bytes,
             }),
           );
         },
+      );
+
+      // Write the latest marker only after all files are uploaded so
+      // getExport never resolves a partially-written revision.
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: env.B2_BUCKET_NAME,
+          Key: `projects/${projectId}/latest`,
+          Body: revisionId,
+          ContentType: "text/plain",
+        }),
       );
 
       return toUpload.length;
@@ -147,6 +164,7 @@ export const uploadProjectToS3 = inngest.createFunction(
     return {
       success: true,
       projectId,
+      revisionId,
       uploadedFiles,
     };
   },

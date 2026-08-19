@@ -7,7 +7,7 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { zipSync } from "fflate";
+import { zip, type AsyncZipOptions } from "fflate";
 
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -43,14 +43,38 @@ const streamToBytes = async (
 };
 
 /**
- * List every real object under `projects/<projectId>/` in B2, excluding the
- * generated `project.zip` itself so it's never nested inside another zip.
+ * Read the `latest` marker object and return the revision ID stored in it.
+ * Returns null when no completed revision exists yet.
+ */
+const resolveLatestRevision = async (
+  projectId: string,
+): Promise<string | null> => {
+  try {
+    const result = await s3.send(
+      new GetObjectCommand({
+        Bucket: B2_BUCKET,
+        Key: `projects/${projectId}/latest`,
+      }),
+    );
+    if (!result.Body) return null;
+    const bytes = await streamToBytes(result.Body);
+    return new TextDecoder().decode(bytes).trim() || null;
+  } catch {
+    // Object not found (NoSuchKey) or any other S3 error: no completed revision.
+    return null;
+  }
+};
+
+/**
+ * List every real object under a completed revision prefix in B2, excluding
+ * the generated `project.zip` itself so it's never nested inside another zip.
  * Handles >1000-object prefixes via pagination.
  */
 const listB2ProjectFiles = async (
   projectId: string,
+  revisionId: string,
 ): Promise<{ key: string; rel: string }[]> => {
-  const prefix = `projects/${projectId}/`;
+  const prefix = `projects/${projectId}/revisions/${revisionId}/`;
   const files: { key: string; rel: string }[] = [];
 
   let continuationToken: string | undefined;
@@ -82,6 +106,71 @@ const listB2ProjectFiles = async (
   } while (continuationToken);
 
   return files;
+};
+
+// Maximum number of source files allowed in a single export archive.
+// Prevents list pagination from growing the in-memory file table unbounded.
+const MAX_EXPORT_FILES = 2_000;
+
+// Maximum total uncompressed bytes accepted before the export is aborted.
+// 256 MB is well above any realistic generated Next.js project.
+const MAX_EXPORT_BYTES = 256 * 1024 * 1024;
+
+// Number of concurrent S3 GetObject requests when downloading revision files.
+const DOWNLOAD_CONCURRENCY = 8;
+
+/**
+ * Promise wrapper around fflate's callback-based `zip()`. Deflation is
+ * offloaded to a worker thread (AsyncZipDeflate) for each file by passing
+ * `[bytes, { level: 6 }]` tuples, which fflate automatically compresses
+ * asynchronously, so the event loop is not blocked during compression.
+ */
+const zipAsync = (
+  input: Record<string, Uint8Array>,
+): Promise<Uint8Array> =>
+  new Promise((resolve, reject) => {
+    // Wrap each entry as [bytes, options] so fflate uses AsyncZipDeflate
+    // internally for off-thread deflation.
+    const asyncInput: Record<string, [Uint8Array, AsyncZipOptions]> = {};
+    for (const [name, bytes] of Object.entries(input)) {
+      asyncInput[name] = [bytes, { level: 6 }];
+    }
+    zip(asyncInput, (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
+
+/**
+ * Download `items` concurrently with at most `limit` requests in flight,
+ * collecting { rel, bytes } pairs. Items whose Body is missing are skipped.
+ */
+const downloadWithConcurrency = async (
+  items: { key: string; rel: string }[],
+  limit: number,
+): Promise<{ rel: string; bytes: Uint8Array }[]> => {
+  const results: ({ rel: string; bytes: Uint8Array } | null)[] = new Array(
+    items.length,
+  ).fill(null);
+  let index = 0;
+
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (index < items.length) {
+        const current = index++;
+        const { key, rel } = items[current];
+        const object = await s3.send(
+          new GetObjectCommand({ Bucket: B2_BUCKET, Key: key }),
+        );
+        if (!object.Body) continue;
+        results[current] = { rel, bytes: await streamToBytes(object.Body) };
+      }
+    },
+  );
+
+  await Promise.all(workers);
+  return results.filter((r): r is { rel: string; bytes: Uint8Array } => r !== null);
 };
 
 export const projectRouter = createTRPCRouter({
@@ -133,53 +222,80 @@ export const projectRouter = createTRPCRouter({
 
       const zipKey = `projects/${project.id}/project.zip`;
 
-      // B2 is the source of truth. Rebuild the complete archive on-demand from
-      // the stored objects (always fresh); cache it as project.zip so later
-      // exports can just presign it. Each step is guarded so an S3 failure
-      // degrades to the DB-fragment fallback instead of a raw 500.
+      // B2 is the source of truth. Resolve the latest completed revision via
+      // the `latest` marker written atomically after every successful upload,
+      // then rebuild the archive from only that revision's files so removed or
+      // renamed files from earlier runs are never included. Each step is
+      // guarded so an S3 failure degrades to the DB-fragment fallback instead
+      // of a raw 500.
       try {
-        const b2files = await listB2ProjectFiles(project.id);
+        const revisionId = await resolveLatestRevision(project.id);
 
-        if (b2files.length > 0) {
-          const zipInput: Record<string, Uint8Array> = {};
+        if (revisionId) {
+          const b2files = await listB2ProjectFiles(project.id, revisionId);
 
-          for (const { key, rel } of b2files) {
-            const object = await s3.send(
-              new GetObjectCommand({ Bucket: B2_BUCKET, Key: key }),
+          if (b2files.length > 0) {
+            // Reject oversized revisions before downloading anything so a
+            // pathological project can't exhaust server memory.
+            if (b2files.length > MAX_EXPORT_FILES) {
+              throw new Error(
+                `Revision has ${b2files.length} files, which exceeds the export limit of ${MAX_EXPORT_FILES}.`,
+              );
+            }
+
+            // Download all revision files concurrently (bounded to
+            // DOWNLOAD_CONCURRENCY in-flight requests at a time).
+            const downloaded = await downloadWithConcurrency(
+              b2files,
+              DOWNLOAD_CONCURRENCY,
             );
 
-            if (!object.Body) continue;
+            // Enforce a total uncompressed size cap after downloading so
+            // memory usage is bounded before zip creation begins.
+            const totalBytes = downloaded.reduce(
+              (sum, { bytes }) => sum + bytes.byteLength,
+              0,
+            );
+            if (totalBytes > MAX_EXPORT_BYTES) {
+              throw new Error(
+                `Revision uncompressed size ${totalBytes} bytes exceeds the export limit of ${MAX_EXPORT_BYTES} bytes.`,
+              );
+            }
 
-            zipInput[rel] = await streamToBytes(object.Body);
+            // Build the zip asynchronously so deflation is offloaded to a
+            // worker thread and the event loop remains unblocked.
+            const zipInput: Record<string, Uint8Array> = {};
+            for (const { rel, bytes } of downloaded) {
+              zipInput[rel] = bytes;
+            }
+            const zipped = await zipAsync(zipInput);
+
+            await s3.send(
+              new PutObjectCommand({
+                Bucket: B2_BUCKET,
+                Key: zipKey,
+                Body: zipped,
+                ContentType: "application/zip",
+              }),
+            );
+
+            const url = await getSignedUrl(
+              s3,
+              new GetObjectCommand({
+                Bucket: B2_BUCKET,
+                Key: zipKey,
+                // Instruct B2 to return the object as a download with the right
+                // filename/content-type. These are inlined into the presigned URL
+                // as query params, so the browser downloads on navigation without
+                // us ever fetching the bytes.
+                ResponseContentType: "application/zip",
+                ResponseContentDisposition: `attachment; filename="${project.name}.zip"`,
+              }),
+              { expiresIn: 300 },
+            );
+
+            return { mode: "url" as const, url, name: project.name };
           }
-
-          const zip = zipSync(zipInput);
-
-          await s3.send(
-            new PutObjectCommand({
-              Bucket: B2_BUCKET,
-              Key: zipKey,
-              Body: zip,
-              ContentType: "application/zip",
-            }),
-          );
-
-          const url = await getSignedUrl(
-            s3,
-            new GetObjectCommand({
-              Bucket: B2_BUCKET,
-              Key: zipKey,
-              // Instruct B2 to return the object as a download with the right
-              // filename/content-type. These are inlined into the presigned URL
-              // as query params, so the browser downloads on navigation without
-              // us ever fetching the bytes.
-              ResponseContentType: "application/zip",
-              ResponseContentDisposition: `attachment; filename="${project.name}.zip"`,
-            }),
-            { expiresIn: 300 },
-          );
-
-          return { mode: "url" as const, url, name: project.name };
         }
       } catch (err) {
         console.error(
@@ -191,6 +307,7 @@ export const projectRouter = createTRPCRouter({
       // Fallback for projects created before B2 storage was implemented.
       const messages = await db.message.findMany({
         where: { projectId: project.id },
+        orderBy: { createdAt: "asc" },
         select: {
           role: true,
           fragment: {
