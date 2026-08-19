@@ -27,6 +27,8 @@
     "template:list": "e2b template list"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1112.0",
+    "@aws-sdk/s3-request-presigner": "^3.1113.0",
     "@base-ui/react": "^1.6.0",
     "@clerk/nextjs": "^7.7.4",
     "@e2b/code-interpreter": "^2.7.0",
@@ -39,6 +41,7 @@
     "@trpc/client": "^11.18.0",
     "@trpc/server": "^11.18.0",
     "@trpc/tanstack-react-query": "^11.18.0",
+    "add": "^2.0.9",
     "class-variance-authority": "^0.7.1",
     "client-only": "^0.0.1",
     "clsx": "^2.1.1",

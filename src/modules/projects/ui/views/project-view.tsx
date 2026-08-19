@@ -3,13 +3,16 @@
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { Code2Icon, CrownIcon, EyeIcon } from "lucide-react";
+import { Code2Icon, CrownIcon, DownloadIcon, EyeIcon, Loader2 } from "lucide-react";
 import { ErrorBoundary } from "react-error-boundary";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { zipSync } from "fflate";
 
 import { Fragment } from "@/generated/prisma/client";
 import { Files } from "@/types";
-
+import { useTRPC } from "@/trpc/client";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -40,6 +43,57 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
   const [tabState, setTabState] = useState<"preview" | "code">("preview");
   const { has } = useAuth();
   const hasProAccess = has({ plan: "pro" });
+
+  // The code-agent response is complete once the last assistant message has a
+  // fragment — MessagesContainer sets `activeFragment` to that fragment, so its
+  // presence is the signal the project is ready to export. Hide (not merely
+  // disable) the Export button while the agent is still generating.
+  const isReady = !!activeFragment;
+
+  const trpc = useTRPC();
+  const exportProject = useMutation(
+    trpc.projects.getExport.mutationOptions({
+      onSuccess: (data) => {
+        if (data.mode === "url") {
+          // Trigger a browser download via the signed URL WITHOUT fetch()/blob(),
+          // which would fail CORS against the private B2 bucket. The signed URL
+          // carries ResponseContentDisposition: attachment, so a navigation into a
+          // hidden iframe downloads the ZIP while the user stays on the page.
+          const iframe = document.createElement("iframe");
+          iframe.style.display = "none";
+          iframe.src = data.url;
+          document.body.appendChild(iframe);
+          setTimeout(() => iframe.remove(), 5000);
+          return;
+        }
+
+        // DB fragment fallback: build the ZIP client-side from tracked files.
+        const encoder = new TextEncoder();
+        const zipInput: Record<string, Uint8Array> = {};
+        for (const [path, content] of Object.entries(data.files)) {
+          zipInput[path] = encoder.encode(content);
+        }
+        const blob = new Blob([zipSync(zipInput)], { type: "application/zip" });
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `${data.name ?? "project"}.zip`;
+        a.click();
+        URL.revokeObjectURL(downloadUrl);
+      },
+      onError: (err) => {
+        const msg = err?.message ?? "";
+        // tRPC surfaces HTTP/parse failures as "Failed to fetch"; map those to
+        // an actionable message while echoing real server errors verbatim.
+        const isNetworkError = /fetch|network|json/i.test(msg);
+        toast.error(
+          isNetworkError || !msg
+            ? "Failed to export project. Please try again."
+            : msg,
+        );
+      },
+    }),
+  );
 
   return (
     <div className="h-screen w-full">
@@ -111,6 +165,22 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
                     <Link href="/pricing">
                       <CrownIcon /> Upgrade
                     </Link>
+                  </Button>
+                )}
+
+                {isReady && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportProject.mutate({ id: projectId })}
+                    disabled={exportProject.isPending}
+                  >
+                    {exportProject.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <DownloadIcon className="h-4 w-4" />
+                    )}
+                    {exportProject.isPending ? "Exporting…" : "Export"}
                   </Button>
                 )}
 

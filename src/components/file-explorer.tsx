@@ -69,15 +69,15 @@ const FileBreadcrumb: React.FC<FileBreadcrumbProps> = ({ filePath }) => {
           <BreadcrumbItem>
             <span className="text-muted-foreground">{firstSegment}</span>
             <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbEllipsis />
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="font-medium">
-                {lastSegment}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
+          </BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbEllipsis />
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="font-medium">
+              {lastSegment}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </>
       );
@@ -154,7 +154,6 @@ export const FileExplorer: React.FC<Props> = ({ files }) => {
             </div>
           </div>
         ) : (
-          // <CodeView lang="ts" code={files[selectedFile]} />
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <p>Select a file to view is&apos;s content</p>
           </div>
