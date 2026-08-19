@@ -3,7 +3,13 @@
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { Code2Icon, CrownIcon, DownloadIcon, EyeIcon, Loader2 } from "lucide-react";
+import {
+  Code2Icon,
+  CrownIcon,
+  DownloadIcon,
+  EyeIcon,
+  Loader2,
+} from "lucide-react";
 import { ErrorBoundary } from "react-error-boundary";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
@@ -55,15 +61,17 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
     trpc.projects.getExport.mutationOptions({
       onSuccess: (data) => {
         if (data.mode === "url") {
-          // Trigger a browser download via the signed URL WITHOUT fetch()/blob(),
-          // which would fail CORS against the private B2 bucket. The signed URL
-          // carries ResponseContentDisposition: attachment, so a navigation into a
-          // hidden iframe downloads the ZIP while the user stays on the page.
-          const iframe = document.createElement("iframe");
-          iframe.style.display = "none";
-          iframe.src = data.url;
-          document.body.appendChild(iframe);
-          setTimeout(() => iframe.remove(), 5000);
+          // Trigger a browser download via the signed URL using a hidden anchor.
+          // The signed URL already carries ResponseContentDisposition: attachment,
+          // so anchor navigation starts a file download while the user stays on
+          // the page. This avoids the iframe lifetime race where a fixed timeout
+          // could remove the frame before the browser initiates the download.
+          const a = document.createElement("a");
+          a.style.display = "none";
+          a.href = data.url;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
           return;
         }
 
@@ -79,18 +87,13 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
         a.href = downloadUrl;
         a.download = `${data.name ?? "project"}.zip`;
         a.click();
-        URL.revokeObjectURL(downloadUrl);
+        // Defer revocation so the browser has time to start the download
+        // navigation before the object URL is torn down.
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
       },
       onError: (err) => {
         const msg = err?.message ?? "";
-        // tRPC surfaces HTTP/parse failures as "Failed to fetch"; map those to
-        // an actionable message while echoing real server errors verbatim.
-        const isNetworkError = /fetch|network|json/i.test(msg);
-        toast.error(
-          isNetworkError || !msg
-            ? "Failed to export project. Please try again."
-            : msg,
-        );
+        toast.error(msg || "Failed to export project. Please try again.");
       },
     }),
   );
