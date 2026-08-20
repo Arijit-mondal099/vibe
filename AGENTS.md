@@ -62,8 +62,15 @@ No unit-test runner is configured (no test script, no vitest/jest/playwright con
 
 All env vars are **validated at import time** in `src/lib/env.ts` via a Zod schema; a missing required var calls `process.exit(1)` — this file is **server-only**, never import it into client components (`"use client"` files read `NEXT_PUBLIC_*` via `process.env` directly, e.g. `src/trpc/client.tsx:33`).
 
-**Required:** `NEXT_PUBLIC_APP_URI`, `DATABASE_URL`, `OPENAI_API_KEY`, `E2B_API_KEY`, `VIBE_TEMPLATE`, `TAVILY_API_KEY`
-**Optional:** `NODE_ENV` (enum: development/production/test), `INNGEST_DEV`
+**Required** — every one is enforced at import by `src/lib/env.ts` (blank value → `process.exit(1)`), so `bun run build` will hard-fail if any is unset:
+
+`NEXT_PUBLIC_APP_URI`, `NODE_ENV` (enum: `development`|`production`|`test`), `DATABASE_URL`, `OPENAI_API_KEY`, `E2B_API_KEY`, `VIBE_TEMPLATE`, `TAVILY_API_KEY`, `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_REGION`, `B2_ENDPOINT`
+
+(`NODE_ENV` is required by the schema but supplied automatically by Next.js — `production` for `build`/`start`, `development` for `dev`. Set it explicitly when running a bare script, e.g. `NODE_ENV=development bunx tsx script.ts`.)
+
+**Optional:** `INNGEST_DEV`
+
+**Runtime-only (not in `env.ts`, so `build` won't catch them):** `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` (Clerk auth) and `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` (the Inngest client in `src/inngest/client.ts`). These are not needed for `bun run build` but the app breaks at runtime/dev without them — add them to `.env` (local) and to Vercel (production).
 
 > **CRITICAL:** `.env*` is gitignored. CI has no `.env` — when you add a **required** env var to `env.ts`, you MUST also add a placeholder to the `build` job in `.github/workflows/ci.yml` or CI will fail. (Rationale: `env.ts` runs at import time during `next build`; `NEXT_PUBLIC_*` vars are inlined into the client bundle at build time.)
 
