@@ -175,7 +175,12 @@ export const ProjectView: React.FC<Props> = ({ projectId }) => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => exportProject.mutate({ id: projectId })}
+                    onClick={() =>
+                      exportProject.mutate({
+                        id: projectId,
+                        fragmentId: activeFragment?.id,
+                      })
+                    }
                     disabled={exportProject.isPending}
                   >
                     {exportProject.isPending ? (

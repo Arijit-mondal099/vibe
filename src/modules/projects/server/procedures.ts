@@ -215,6 +215,9 @@ export const projectRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().min(1, { error: "ID is required" }),
+        // When provided, export the exact fragment the user selected instead
+        // of always the project's latest revision.
+        fragmentId: z.string().min(1).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -233,14 +236,48 @@ export const projectRouter = createTRPCRouter({
         });
       }
 
-      // B2 is the source of truth. Resolve the latest completed revision via
-      // the `latest` marker written atomically after every successful upload,
-      // then rebuild the archive from only that revision's files so removed or
-      // renamed files from earlier runs are never included. Each step is
-      // guarded so an S3 failure degrades to the DB-fragment fallback instead
-      // of a raw 500.
+      // When a specific fragment was requested, resolve it up front (and
+      // verify it actually belongs to this project) so both the B2 path and
+      // the DB fallback below export that exact fragment, not the latest.
+      let targetFragment: {
+        revisionId: string | null;
+        files: Files;
+      } | null = null;
+
+      if (input.fragmentId) {
+        const fragment = await db.fragment.findUnique({
+          where: { id: input.fragmentId },
+          select: {
+            revisionId: true,
+            files: true,
+            message: { select: { projectId: true } },
+          },
+        });
+
+        if (!fragment || fragment.message.projectId !== project.id) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Fragment not found for this project.",
+          });
+        }
+
+        targetFragment = {
+          revisionId: fragment.revisionId,
+          files: fragment.files as Files,
+        };
+      }
+
+      // B2 is the source of truth. Resolve either the requested fragment's
+      // own revision, or (when no fragment was specified) the latest
+      // completed revision via the `latest` marker written atomically after
+      // every successful upload. The archive is rebuilt from only that
+      // revision's files so removed or renamed files from other runs are
+      // never included. Each step is guarded so an S3 failure degrades to
+      // the DB-fragment fallback instead of a raw 500.
       try {
-        const revisionId = await resolveLatestRevision(project.id);
+        const revisionId = targetFragment
+          ? targetFragment.revisionId
+          : await resolveLatestRevision(project.id);
 
         if (revisionId) {
           const zipKey = `projects/${project.id}/revisions/${revisionId}/project.zip`;
@@ -307,23 +344,32 @@ export const projectRouter = createTRPCRouter({
         );
       }
 
-      // Fallback for projects created before B2 storage was implemented.
-      const messages = await db.message.findMany({
-        where: { projectId: project.id },
-        orderBy: { createdAt: "asc" },
-        select: {
-          role: true,
-          fragment: {
-            select: { files: true },
-          },
-        },
-      });
+      // Fallback for projects created before B2 storage was implemented, or
+      // when the resolved revision had no files in B2. If a specific
+      // fragment was requested, its own files are the fallback source;
+      // otherwise fall back to the last assistant fragment for the project.
+      const fallbackFiles = targetFragment
+        ? targetFragment.files
+        : await (async () => {
+            const messages = await db.message.findMany({
+              where: { projectId: project.id },
+              orderBy: { createdAt: "asc" },
+              select: {
+                role: true,
+                fragment: {
+                  select: { files: true },
+                },
+              },
+            });
 
-      const lastFragment = messages
-        .filter((m) => m.role === "ASSISTANT" && m.fragment)
-        .at(-1)?.fragment;
+            const lastFragment = messages
+              .filter((m) => m.role === "ASSISTANT" && m.fragment)
+              .at(-1)?.fragment;
 
-      if (!lastFragment?.files) {
+            return lastFragment?.files as Files | undefined;
+          })();
+
+      if (!fallbackFiles) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message:
@@ -333,7 +379,7 @@ export const projectRouter = createTRPCRouter({
 
       return {
         mode: "zip" as const,
-        files: lastFragment.files as Files,
+        files: fallbackFiles,
         name: project.name,
       };
     }),

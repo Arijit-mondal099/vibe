@@ -167,6 +167,10 @@ export const codeAgentFunction = inngest.createFunction(
               sandBoxUrl: sandboxUrl,
               files: result.state.data.files,
               title: parseAgentOutput(title),
+              // Same id used as the S3 upload revision id below, so this
+              // fragment can later be resolved back to its exact revision
+              // for export instead of always exporting the latest one.
+              revisionId: event.id,
             },
           },
         },
