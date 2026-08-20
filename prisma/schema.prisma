@@ -53,6 +53,11 @@ model Fragment {
   sandBoxUrl String
   title      String
   files      Json
+  // The Inngest event id used as the S3 upload revision id for this
+  // fragment's generation run. Null for fragments created before this
+  // column existed. Lets exports resolve the exact revision a specific
+  // fragment corresponds to, instead of always the latest one.
+  revisionId String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
