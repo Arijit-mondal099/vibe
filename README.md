@@ -8,7 +8,7 @@
 
 Describe what you want to build and Vibe ships a working app in minutes — with live preview and full source code you can keep, extend, or share.
 
-[Try it now](http://localhost:3000) · [GitHub](https://github.com/Arijit-mondal099/vibe)
+[Try it now](https://vibe-eight-indol.vercel.app/) · [GitHub](https://github.com/Arijit-mondal099/vibe)
 
 </div>
 
