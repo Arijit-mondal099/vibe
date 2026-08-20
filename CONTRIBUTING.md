@@ -64,7 +64,7 @@ B2_ENDPOINT=https://s3.us-east-005.backblazeb2.com
 # INNGEST_SIGNING_KEY=
 ```
 
-Required variables are validated at import time by `src/lib/env.ts` — a missing value will exit the process with an error.
+Required variables are validated at import time by `src/lib/env.ts` — a missing value will exit the process with an error. The Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`) and the Inngest production keys (`INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`) are **runtime-only** and are not checked by `env.ts`, so a missing one won't fail `bun run build` but will break the app at runtime or in dev.
 
 ### 4. Set up the database
 
